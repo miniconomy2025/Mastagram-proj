@@ -23,21 +23,21 @@ module.exports = {
     await db.collection('activities').createIndex({ actor: 1 });
 
     await db.createCollection('likes');
-    // await db.collection('likes').createIndex({ id: 1 });
+    await db.collection('likes').createIndex({ id: 1 });
     await db.collection('likes').createIndex({ actor: 1 });
     await db.collection('likes').createIndex({ object: 1 });
 
     await db.createCollection('liked');
-    // await db.collection('liked').createIndex({ id: 1 });
+    await db.collection('liked').createIndex({ id: 1 });
     await db.collection('liked').createIndex({ actor: 1 });
     await db.collection('liked').createIndex({ object: 1 });
 
     await db.createCollection('followers');
-    // await db.collection('followers').createIndex({ id: 1 });
+    await db.collection('followers').createIndex({ id: 1 });
     await db.collection('followers').createIndex({ actor: 1 });
 
     await db.createCollection('following');
-    // await db.collection('following').createIndex({ id: 1 });
+    await db.collection('following').createIndex({ id: 1 });
     await db.collection('following').createIndex({ actor: 1 });
 
   },

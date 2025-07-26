@@ -5,6 +5,8 @@ import appConfig from './configs/app.config';
 
 const app  = express();
 
+// add routes that are not part of ActivityPub Express here
+
 app.get('/', (req, res) => {
   res.send('Welcome to Mastagram ActivityPub Server!');
 });
