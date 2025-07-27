@@ -1,11 +1,22 @@
-import express, { Application } from 'express';
+import express from 'express';
 import ActivitypubExpress from 'activitypub-express';
+import passport from './configs/passport.config';
+import apiRouter from './routers';
 import { getDb, initMongo } from './configs/mongodb.config';
 import appConfig from './configs/app.config';
 
+import { setupSwaggerDocs } from './configs/swagger';
+
 const app  = express();
+setupSwaggerDocs(app);
+
+app.use(passport.initialize());
+
+app.use('/api', express.json());
+app.use('/api', express.urlencoded({ extended: true }));
 
 // add routes that are not part of ActivityPub Express here
+app.use('/api', apiRouter);
 
 app.get('/', (req, res) => {
   res.send('Welcome to Mastagram ActivityPub Server!');
