@@ -92,7 +92,7 @@ const Profile = () => {
         zIndex: 50,
         backgroundColor: 'rgba(hsl(var(--background)), 0.8)',
         backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--border)'
+        borderBottom: '1px solid hsl(var(--border))'
       }}>
         <div style={{
           maxWidth: '28rem',
@@ -161,7 +161,7 @@ const Profile = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     width: '100%',
-                    border: '1px solid var(--border)',
+                    border: '1px solid hsl(var(--border))',
                     borderRadius: '0.375rem',
                     padding: '0.5rem 0.75rem',
                     fontSize: '0.875rem',
@@ -187,7 +187,7 @@ const Profile = () => {
                             width: '3rem', 
                             height: '3rem', 
                             borderRadius: '9999px', 
-                            border: '1px solid var(--border)' 
+                            border: '1px solid hsl(var(--border))' 
                           }} 
                         />
                         <div>
@@ -223,7 +223,7 @@ const Profile = () => {
                             width: '3rem', 
                             height: '3rem', 
                             borderRadius: '9999px', 
-                            border: '1px solid var(--border)' 
+                            border: '1px solid hsl(var(--border))' 
                           }} 
                         />
                         <div>
@@ -329,7 +329,7 @@ const Profile = () => {
               <TabsList style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
-                borderTop: '1px solid var(--border)',
+                borderTop: '1px solid hsl(var(--border))',
                 margin: "0 3%"
               }}>
                 <TabsTrigger value="posts">
