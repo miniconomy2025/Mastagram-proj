@@ -15,6 +15,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
@@ -32,11 +33,16 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@apollo/server": "^5.0.0",
     "activitypub-express": "^4.4.2",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "graphql": "^16.11.0",
+    "graphql-subscriptions": "^3.0.0",
+    "graphql-tag": "^2.12.6",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.18.0",
+    "mongoose": "^8.16.5",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-oauth2": "^1.8.0",
