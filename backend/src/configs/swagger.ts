@@ -19,7 +19,7 @@ const options = {
     ],
     components: {
       securitySchemes: {
-        bearerAuth: {
+        BearerAuth: {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
@@ -27,7 +27,6 @@ const options = {
         },
       },
     },
-    security: [{ bearerAuth: [] }],
   },
   apis: [
     './src/routers/*.ts',
@@ -36,21 +35,7 @@ const options = {
   ],
 };
 
-const swaggerSpecRaw = swaggerJsdoc(options);
-const swaggerSpec: any = { ...swaggerSpecRaw };
-const raw: any = swaggerSpecRaw;
-if (raw && raw.paths && typeof raw.paths === 'object') {
-  const newPaths: Record<string, any> = {};
-  for (const path in raw.paths) {
-    // Add /api prefix to all paths that don't already have it
-    if (!path.startsWith('/api/')) {
-      newPaths['/api' + path] = raw.paths[path];
-    } else {
-      newPaths[path] = raw.paths[path];
-    }
-  }
-  swaggerSpec.paths = newPaths;
-}
+const swaggerSpec = swaggerJsdoc(options);
 
 export function setupSwaggerDocs(app: Express) {
   app.use('/api-docs', swaggerUi.serve);

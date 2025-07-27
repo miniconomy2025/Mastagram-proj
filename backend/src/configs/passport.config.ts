@@ -108,7 +108,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             googleId: profile.id,
             name: profile.displayName,
             email: profile.emails?.[0]?.value,
-            profilePicture: profile.photos?.[0]?.value,
+            avatar_url: profile.photos?.[0]?.value,
             bio: '' 
           };
 

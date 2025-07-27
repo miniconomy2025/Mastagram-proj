@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import ActivitypubExpress from 'activitypub-express';
 import passport from './configs/passport.config';
 import apiRouter from './routers';
@@ -9,6 +10,14 @@ import { setupSwaggerDocs } from './configs/swagger';
 
 const app  = express();
 setupSwaggerDocs(app);
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3500', 'null'], // Allow local development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 
 app.use(passport.initialize());
 

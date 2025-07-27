@@ -122,7 +122,7 @@ export class AuthController {
             id: req.user._id,
             name: req.user.name,
             email: req.user.email,
-            profilePicture: req.user.profilePicture
+            avatar_url: req.user.profilePicture
           }
         });
       } else {

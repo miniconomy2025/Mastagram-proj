@@ -202,7 +202,7 @@ authRouter.put('/tokens', AuthController.refreshToken);
  *                       type: string
  *                     email:
  *                       type: string
- *                     profilePicture:
+ *                     avatar_url:
  *                       type: string
  *                 message:
  *                   type: string

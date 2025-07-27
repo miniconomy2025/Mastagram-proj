@@ -5,7 +5,8 @@ export interface User {
   googleId?: string;
   email?: string;
   name?: string;
-  profilePicture?: string;
+  username?: string;
+  avatar_url?: string;
   bio?: string;
 }
 
@@ -43,4 +44,19 @@ export interface AuthSuccessResponse {
   success: boolean;
   data: AuthTokenResponse;
   message?: string;
+}
+
+export interface UserProfileResponse {
+  _id?: string;
+  email?: string;
+  display_name?: string;
+  username?: string;
+  avatar_url?: string;
+  bio?: string;
+}
+
+export interface ProfileApiResponse {
+  success: boolean;
+  data: UserProfileResponse;
+  message: string;
 }
