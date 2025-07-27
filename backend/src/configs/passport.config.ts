@@ -89,10 +89,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
         const db = getDb();
 
-        let user: User | null = await db.collection('users').findOne({ googleId: profile.id });
+        let user: User | null = await db.collection('users').findOne({ google_id: profile.id });
 
         if (user) {
-          // Attach tokens to user object for callback 
+          // Attach tokens to user object for callback
           const userWithTokens: UserWithTokens = {
             ...user,
             currentTokens: {
@@ -105,11 +105,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           return done(null, userWithTokens);
         } else {
           const newUser: Omit<User, '_id'> = {
-            googleId: profile.id,
-            name: profile.displayName,
+            google_id: profile.id,
+            display_name: profile.display_name,
             email: profile.emails?.[0]?.value,
-            avatar_url: profile.photos?.[0]?.value,
-            bio: '' 
+            avatar_url: profile.photos?.[0]?.value
           };
 
           const result = await db.collection('users').insertOne(newUser);
@@ -146,7 +145,7 @@ export const ensureAuthenticated = async (req: Request & { user?: User }, res: R
     const payload = await verifyGoogleIdToken(token);
 
     const db = getDb();
-    const user = await db.collection('users').findOne({ googleId: payload.sub });
+    const user = await db.collection('users').findOne({ google_id: payload.sub });
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });

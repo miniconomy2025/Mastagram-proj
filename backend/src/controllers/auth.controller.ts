@@ -10,7 +10,7 @@ import {
 
 export class AuthController {
   /**
-   * Handle Google OAuth callback - REST compliant
+   * Handle Google OAuth callback
    * POST /auth/tokens (after OAuth callback)
    */
   static async googleCallback(req: Request, res: Response): Promise<Response<AuthSuccessResponse | AuthErrorResponse>> {
@@ -105,9 +105,7 @@ export class AuthController {
       });
     }
   }
-
-
-
+  
   /**
    * Get authentication status - REST compliant
    * GET /auth/status

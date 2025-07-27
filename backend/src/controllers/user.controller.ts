@@ -24,7 +24,7 @@ export class UserController {
       const db = getDb();
       const userProfile = await db.collection('users').findOne(
         { _id: user._id },
-        { projection: { email: 1, name: 1, username: 1, avatar_url: 1, bio: 1 } }
+        { projection: { email: 1, display_name: 1, username: 1, avatar_url: 1, bio: 1 } }
       );
 
       if (!userProfile) {
@@ -38,7 +38,7 @@ export class UserController {
       const responseData: UserProfileResponse = {
         _id: userProfile._id?.toString(),
         email: userProfile.email,
-        display_name: userProfile.name,
+        display_name: userProfile.display_name,
         username: userProfile.username,
         avatar_url: userProfile.avatar_url,
         bio: userProfile.bio
@@ -181,7 +181,7 @@ export class UserController {
       // Fetch the updated user profile for response
       const updatedUser = await db.collection('users').findOne(
         { _id: user._id },
-        { projection: { email: 1, name: 1, username: 1, avatar_url: 1, bio: 1 } }
+        { projection: { email: 1, display_name: 1, username: 1, avatar_url: 1, bio: 1 } }
       );
 
       if (!updatedUser) {

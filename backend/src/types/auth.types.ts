@@ -2,9 +2,9 @@ import { ObjectId } from 'mongodb';
 
 export interface User {
   _id?: ObjectId;
-  googleId?: string;
+  google_id?: string;
   email?: string;
-  name?: string;
+  display_name?: string;
   username?: string;
   avatar_url?: string;
   bio?: string;
@@ -20,7 +20,7 @@ export interface UserWithTokens extends User {
 
 export interface GoogleProfile {
   id: string;
-  displayName: string;
+  display_name: string;
   emails?: Array<{ value: string }>;
   photos?: Array<{ value: string }>;
 }

@@ -198,7 +198,7 @@ authRouter.put('/tokens', AuthController.refreshToken);
  *                   properties:
  *                     id:
  *                       type: string
- *                     name:
+ *                     display_name:
  *                       type: string
  *                     email:
  *                       type: string
