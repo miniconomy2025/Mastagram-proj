@@ -16,7 +16,6 @@ const navigation = [
   { name: 'Search', href: '/', icon: Search },
   { name: 'Trending', href: '/trending', icon: TrendingUp },
   { name: 'Notifications', href: '/notifications', icon: Heart },
-  { name: 'Saved', href: '/saved', icon: Bookmark },
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
