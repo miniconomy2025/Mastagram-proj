@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import passport, { ensureGuest, ensureAuthenticated } from '../configs/passport.config';
+import passport, { ensureGuest } from '../configs/passport.config';
 import { AuthController } from '../controllers/auth.controller';
 
 const authRouter = Router();
@@ -169,45 +169,6 @@ authRouter.get('/tokens',
  */
 authRouter.put('/tokens', AuthController.refreshToken);
 
-
-
-/**
- * @openapi
- * /auth/session:
- *   get:
- *     tags:
- *       - Authentication
- *     summary: Get current session information
- *     description: Check if user is authenticated and return current session info
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Current session information retrieved
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 authenticated:
- *                   type: boolean
- *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     name:
- *                       type: string
- *                     email:
- *                       type: string
- *                     profilePicture:
- *                       type: string
- *                 message:
- *                   type: string
- */
-authRouter.get('/session', ensureAuthenticated, AuthController.getAuthStatus);
 
 /**
  * @openapi

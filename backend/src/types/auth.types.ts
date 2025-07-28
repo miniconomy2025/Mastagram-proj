@@ -3,9 +3,10 @@ import { ObjectId } from 'mongodb';
 export interface User {
   _id?: ObjectId;
   googleId?: string;
+  username?: string;
   email?: string;
-  name?: string;
-  profilePicture?: string;
+  displayName?: string;
+  avatarUrl?: string;
   bio?: string;
 }
 
@@ -15,13 +16,6 @@ export interface UserWithTokens extends User {
     refreshToken: string;
     idToken: string;
   };
-}
-
-export interface GoogleProfile {
-  id: string;
-  displayName: string;
-  emails?: Array<{ value: string }>;
-  photos?: Array<{ value: string }>;
 }
 
 export interface RefreshTokenRequest {

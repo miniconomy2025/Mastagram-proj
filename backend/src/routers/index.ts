@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import authRouter from './auth.router';
+import profileRouter from './profile.router';
 
 const apiRouter = Router();
 
-// Mount authentication routes
 apiRouter.use('/auth', authRouter);
+apiRouter.use('/profile', profileRouter);
 
 // Health check endpoint
 apiRouter.get('/health', (req, res) => {
