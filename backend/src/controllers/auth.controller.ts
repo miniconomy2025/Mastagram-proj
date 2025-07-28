@@ -105,39 +105,4 @@ export class AuthController {
       });
     }
   }
-
-
-
-  /**
-   * Get authentication status - REST compliant
-   * GET /auth/status
-   */
-  static async getAuthStatus(req: Request & { user?: any }, res: Response): Promise<Response> {
-    try {
-      if (req.user) {
-        return res.status(200).json({
-          success: true,
-          authenticated: true,
-          user: {
-            id: req.user._id,
-            name: req.user.name,
-            email: req.user.email,
-            profilePicture: req.user.profilePicture
-          }
-        });
-      } else {
-        return res.status(200).json({
-          success: true,
-          authenticated: false,
-          message: 'Not authenticated'
-        });
-      }
-    } catch (error) {
-      console.error('Auth status check error:', error);
-      return res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to check authentication status'
-      });
-    }
-  }
 }

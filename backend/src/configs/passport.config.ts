@@ -1,10 +1,10 @@
 import passport from 'passport';
-import { Strategy as GoogleStrategy, StrategyOptions, VerifyCallback, GoogleCallbackParameters } from 'passport-google-oauth20';
+import { Strategy as GoogleStrategy, StrategyOptions, VerifyCallback, GoogleCallbackParameters, Profile as GoogleProfile } from 'passport-google-oauth20';
 
 import { Request, Response, NextFunction } from 'express';
 import { getDb } from './mongodb.config';
 
-import { User, UserWithTokens, GoogleProfile } from '../types/auth.types';
+import { User, UserWithTokens } from '../types/auth.types';
 
 // Helper: verify Google ID token
 export async function verifyGoogleIdToken(idToken: string) {
@@ -68,8 +68,6 @@ export async function refreshGoogleToken(refreshToken: string) {
   }
 }
 
-// No serialize/deserialize needed for JWT
-
 // Google OAuth Strategy
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   const strategyOptions: StrategyOptions = {
@@ -106,10 +104,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         } else {
           const newUser: Omit<User, '_id'> = {
             googleId: profile.id,
-            name: profile.displayName,
+            displayName: profile.displayName,
             email: profile.emails?.[0]?.value,
-            profilePicture: profile.photos?.[0]?.value,
-            bio: '' 
+            avatarUrl: profile.photos?.[0]?.value,
           };
 
           const result = await db.collection('users').insertOne(newUser);
