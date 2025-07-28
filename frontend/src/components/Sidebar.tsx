@@ -9,7 +9,7 @@ import {
   TrendingUp,
   Bookmark,
 } from 'lucide-react';
-import './sidebar.css';
+import './Sidebar.css';
 
 const navigation = [
   { name: 'Feed', href: '/feed', icon: Home },
