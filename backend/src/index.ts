@@ -2,9 +2,8 @@ import express from 'express';
 import { ApolloServer } from '@apollo/server';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import http from 'http';
-import cors from 'cors';
-import { json } from 'body-parser';
 import ActivitypubExpress from 'activitypub-express';
+import cors from 'cors';
 import passport from './configs/passport.config';
 import apiRouter from './routers';
 import { getDb, initMongo } from './configs/mongodb.config';
@@ -20,6 +19,21 @@ const httpServer = http.createServer(app);
 
 // Setup Swagger documentation
 setupSwaggerDocs(app);
+
+// Setup CORS
+const allowedOrigins = [
+  'http://localhost:8081', 
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 
 // Initialize Passport
 app.use(passport.initialize());
