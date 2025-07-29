@@ -30,14 +30,14 @@ export const SearchHeader = ({ query, onQueryChange }: SearchHeaderProps) => {
           )}
         </div>
 
-        <div className="text-center mt-4">
+        {/* <div className="text-center mt-4">
           <h1 className="font-heading font-bold text-2xl bg-gradient-primary bg-clip-text text-transparent">
             MastoInstaTok
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             Discover amazing content
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

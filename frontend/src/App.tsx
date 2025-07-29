@@ -11,6 +11,8 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import ProfileEdit from "./pages/ProfileEdit";
 import Notifications from "./pages/Notifications";
+import Search from "./pages/Search";
+import CreatePost from "./pages/CreatePost";
 import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
 
@@ -27,8 +29,10 @@ const App = () => (
           <main className="flex-1 lg:ml-64">
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/search" element={<Search />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/edit" element={<ProfileEdit />} />
+              <Route path="/create" element={<CreatePost />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/login" element={<Login />} />

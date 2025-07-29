@@ -54,8 +54,13 @@ const userPosts = [
     username: 'king👑',
     caption: 'Beautiful sunset from my rooftop 🌅',
     hashtags: ['sunset', 'photography', 'golden'],
-    media_url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
-    media_type: 'image',
+    media: [
+      {
+        id: 'm1',
+        url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
+        type: 'image',
+      }
+    ],
     likes_count: 2534,
     comments_count: 127,
     created_at: '2024-01-15T10:00:00Z'
@@ -66,8 +71,13 @@ const userPosts = [
     username: 'king👑',
     caption: 'Coffee and code - perfect morning combo ☕💻',
     hashtags: ['coffee', 'developer', 'morning'],
-    media_url: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400',
-    media_type: 'image',
+    media: [
+      {
+        id: 'm2',
+        url: 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4',
+        type: 'video',
+      },
+    ],
     likes_count: 1876,
     comments_count: 89,
     created_at: '2024-01-14T08:30:00Z'
@@ -227,15 +237,15 @@ const Profile = () => {
                         alignItems: 'center',
                         gap: '1rem'
                       }}>
-                        <img 
-                          src={user.avatar_url} 
-                          alt={user.display_name} 
-                          style={{ 
-                            width: '3rem', 
-                            height: '3rem', 
-                            borderRadius: '9999px', 
-                            border: '1px solid hsl(var(--border))' 
-                          }} 
+                        <img
+                          src={user.avatar_url}
+                          alt={user.display_name}
+                          style={{
+                            width: '3rem',
+                            height: '3rem',
+                            borderRadius: '9999px',
+                            border: '1px solid hsl(var(--border))'
+                          }}
                         />
                         <div>
                           <p style={{ fontWeight: '600' }}>{user.display_name}</p>
@@ -244,9 +254,9 @@ const Profile = () => {
                       </li>
                     ))
                   ) : (
-                    <p style={{ 
-                      color: 'hsl(var(--muted-foreground))', 
-                      textAlign: 'center' 
+                    <p style={{
+                      color: 'hsl(var(--muted-foreground))',
+                      textAlign: 'center'
                     }}>
                       No users found.
                     </p>
@@ -263,15 +273,15 @@ const Profile = () => {
                         alignItems: 'center',
                         gap: '1rem'
                       }}>
-                        <img 
-                          src={user.avatar_url} 
-                          alt={user.display_name} 
-                          style={{ 
-                            width: '3rem', 
-                            height: '3rem', 
-                            borderRadius: '9999px', 
-                            border: '1px solid hsl(var(--border))' 
-                          }} 
+                        <img
+                          src={user.avatar_url}
+                          alt={user.display_name}
+                          style={{
+                            width: '3rem',
+                            height: '3rem',
+                            borderRadius: '9999px',
+                            border: '1px solid hsl(var(--border))'
+                          }}
                         />
                         <div>
                           <p style={{ fontWeight: '600' }}>{user.display_name}</p>
@@ -280,9 +290,9 @@ const Profile = () => {
                       </li>
                     ))
                   ) : (
-                    <p style={{ 
-                      color: 'hsl(var(--muted-foreground))', 
-                      textAlign: 'center' 
+                    <p style={{
+                      color: 'hsl(var(--muted-foreground))',
+                      textAlign: 'center'
                     }}>
                       No users found.
                     </p>
@@ -296,15 +306,15 @@ const Profile = () => {
             <section style={{ padding: '1.5rem', display: 'grid', gap: '1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
                 <div style={{ position: 'relative' }}>
-                  <img 
-                    src={userData.avatar_url} 
-                    alt="avatar" 
-                    style={{ 
-                      width: '5rem', 
-                      height: '5rem', 
-                      borderRadius: '9999px', 
-                      border: '2px solid hsl(var(--primary))' 
-                    }} 
+                  <img
+                    src={userData.avatar_url}
+                    alt="avatar"
+                    style={{
+                      width: '5rem',
+                      height: '5rem',
+                      borderRadius: '9999px',
+                      border: '2px solid hsl(var(--primary))'
+                    }}
                   />
                   <button
                     aria-label="Change avatar"
@@ -330,7 +340,7 @@ const Profile = () => {
                       <div style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>{userData.posts_count}</div>
                       <div style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.875rem' }}>Posts</div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => {
                         setConnectionsTab('followers');
                         setShowConnections(true);
@@ -342,7 +352,7 @@ const Profile = () => {
                       </div>
                       <div style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.875rem' }}>Followers</div>
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setConnectionsTab('following');
                         setShowConnections(true);
@@ -357,11 +367,11 @@ const Profile = () => {
               </div>
 
               <div>
-                <h2 style={{ 
-                  fontWeight: 'bold', 
-                  fontSize: '1.125rem', 
-                  display: 'flex', 
-                  alignItems: 'center' 
+                <h2 style={{
+                  fontWeight: 'bold',
+                  fontSize: '1.125rem',
+                  display: 'flex',
+                  alignItems: 'center'
                 }}>
                   {userData.display_name}
                   {userData.verified && (
@@ -399,11 +409,11 @@ const Profile = () => {
               </TabsContent>
               <TabsContent value="liked">
                 <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <Heart style={{ 
-                    width: '3rem', 
-                    height: '3rem', 
-                    color: 'hsl(var(--muted-foreground))', 
-                    margin: '0 auto 1rem' 
+                  <Heart style={{
+                    width: '3rem',
+                    height: '3rem',
+                    color: 'hsl(var(--muted-foreground))',
+                    margin: '0 auto 1rem'
                   }} />
                   <h3 style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>No liked posts yet</h3>
                   <p style={{ color: 'hsl(var(--muted-foreground))' }}>Posts you like will appear here</p>
@@ -411,11 +421,11 @@ const Profile = () => {
               </TabsContent>
               <TabsContent value="saved">
                 <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <Bookmark style={{ 
-                    width: '3rem', 
-                    height: '3rem', 
-                    color: 'hsl(var(--muted-foreground))', 
-                    margin: '0 auto 1rem' 
+                  <Bookmark style={{
+                    width: '3rem',
+                    height: '3rem',
+                    color: 'hsl(var(--muted-foreground))',
+                    margin: '0 auto 1rem'
                   }} />
                   <h3 style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>No saved posts yet</h3>
                   <p style={{ color: 'hsl(var(--muted-foreground))' }}>Save posts to view them later</p>
