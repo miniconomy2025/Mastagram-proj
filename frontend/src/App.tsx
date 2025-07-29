@@ -11,6 +11,8 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import ProfileEdit from "./pages/ProfileEdit";
 import Notifications from "./pages/Notifications";
+import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,8 @@ const App = () => (
               <Route path="/profile/edit" element={<ProfileEdit />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback/>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
