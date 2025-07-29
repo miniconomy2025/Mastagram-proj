@@ -10,57 +10,46 @@ import {
 
 export class AuthController {
   /**
-   * Handle Google OAuth callback - REST compliant
-   * POST /auth/tokens (after OAuth callback)
+   * Handle Google OAuth callback - Redirects to frontend with tokens
+   * GET /auth/tokens (OAuth callback)
    */
-  static async googleCallback(req: Request, res: Response): Promise<Response<AuthSuccessResponse | AuthErrorResponse>> {
+  static async googleCallback(req: Request, res: Response): Promise<void> {
     try {
       const user = req.user as UserWithTokens;
       const { currentTokens } = user;
 
       if (!currentTokens) {
-        return res.status(401).json({
-          error: 'Authentication failed',
-          message: 'No tokens received from Google OAuth',
-          details: 'Please try logging in again'
-        });
+        // Redirect to frontend with error
+        const errorUrl = `${process.env.FRONTEND_URL}/login?error=no_tokens`;
+        return res.redirect(errorUrl);
       }
 
-      const tokenData: AuthTokenResponse = {
-        idToken: currentTokens.idToken,
-        refreshToken: currentTokens.refreshToken
-      };
+      // Redirect to frontend with tokens in URL parameters
+      const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?${new URLSearchParams({
+        id_token: currentTokens.idToken,
+        refresh_token: currentTokens.refreshToken
+      }).toString()}`;
 
-      return res.status(200).json({
-        success: true,
-        data: tokenData,
-        message: 'Authentication successful'
-      });
+      res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google OAuth callback error:', error);
-      return res.status(500).json({
-        error: 'Internal server error',
-        message: 'Authentication process failed',
-        details: 'Please try again later'
-      });
+      const errorUrl = `${process.env.FRONTEND_URL}/login?error=auth_failed`;
+      res.redirect(errorUrl);
     }
   }
 
   /**
-   * Handle authentication failure - REST compliant
+   * Handle authentication failure - Redirect to frontend
    * GET /auth/failure
    */
-  static authFailure(_req: Request, res: Response): Response<AuthErrorResponse> {
-    return res.status(401).json({
-      error: 'Authentication failed',
-      message: 'Google OAuth authentication was unsuccessful',
-      details: 'Please try again or contact support if the problem persists'
-    });
+  static authFailure(_req: Request, res: Response): void {
+    const errorUrl = `${process.env.FRONTEND_URL}/login?error=oauth_failed`;
+    res.redirect(errorUrl);
   }
 
   /**
-   * Handle token refresh - REST compliant
-   * POST /auth/tokens/refresh
+   * Handle token refresh - REST compliant (this stays the same)
+   * PUT /auth/tokens
    */
   static async refreshToken(
     req: Request<{}, AuthSuccessResponse | AuthErrorResponse, RefreshTokenRequest>,
@@ -102,6 +91,41 @@ export class AuthController {
         error: 'Unauthorized',
         message: 'Invalid or expired refresh token',
         details: 'Please log in again to get new tokens'
+      });
+    }
+  }
+
+  /**
+   * Alternative: Get tokens via API after successful redirect
+   * GET /auth/tokens/current (optional - for getting current user tokens)
+   */
+  static async getCurrentTokens(req: Request, res: Response): Promise<Response<AuthSuccessResponse | AuthErrorResponse>> {
+    try {
+      // This would require the user to be authenticated
+      // You can implement this if you want an API endpoint to get current tokens
+      const user = req.user as UserWithTokens;
+      
+      if (!user?.currentTokens) {
+        return res.status(401).json({
+          error: 'Not authenticated',
+          message: 'No valid session found'
+        });
+      }
+
+      const tokenData: AuthTokenResponse = {
+        idToken: user.currentTokens.idToken,
+        refreshToken: user.currentTokens.refreshToken
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: tokenData,
+        message: 'Current tokens retrieved'
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to retrieve tokens'
       });
     }
   }

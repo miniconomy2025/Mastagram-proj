@@ -4,33 +4,10 @@ import { AuthController } from '../controllers/auth.controller';
 
 const authRouter = Router();
 
-
-// NOTE : I AM KEEPIN THIS FOR TESTING ON BROWSER
-/**
- * @openapi
- * /auth/login:
- *   get:
- *     tags:
- *       - Authentication
- *     summary: Initiate Google OAuth login (convenience endpoint)
- *     description: Convenience GET endpoint that redirects to Google OAuth (same as POST /auth/session)
- *     responses:
- *       302:
- *         description: Redirect to Google OAuth login page
- *       403:
- *         description: Already authenticated
- */
-authRouter.get('/login', ensureGuest, passport.authenticate('google', {
-  scope: ['profile', 'email'],
-  session: false,
-  accessType: 'offline',
-  prompt: 'consent'
-}));
-
 /**
  * @openapi
  * /auth/session:
- *   post:
+ *   get:
  *     tags:
  *       - Authentication
  *     summary: Create new authentication session
@@ -40,17 +17,8 @@ authRouter.get('/login', ensureGuest, passport.authenticate('google', {
  *         description: Redirect to Google OAuth login page
  *       403:
  *         description: Already authenticated
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                 message:
- *                   type: string
  */
-authRouter.post('/session', ensureGuest, passport.authenticate('google', {
+authRouter.get('/session', ensureGuest, passport.authenticate('google', {
   scope: ['profile', 'email'],
   session: false,
   accessType: 'offline',
@@ -64,42 +32,16 @@ authRouter.post('/session', ensureGuest, passport.authenticate('google', {
  *     tags:
  *       - Authentication
  *     summary: Google OAuth callback
- *     description: Callback URL for Google OAuth. Returns authentication tokens on success.
+ *     description: Callback URL for Google OAuth. Redirects to frontend with tokens.
  *     responses:
- *       200:
- *         description: Authentication successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     idToken:
- *                       type: string
- *                     refreshToken:
- *                       type: string
- *                 message:
- *                   type: string
- *       401:
- *         description: Authentication failed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                 message:
- *                   type: string
- *                 details:
- *                   type: string
+ *       302:
+ *         description: Redirect to frontend with tokens or error
  */
 authRouter.get('/tokens',
-  passport.authenticate('google', { session: false, failureRedirect: '/auth/failure' }),
+  passport.authenticate('google', { 
+    session: false, 
+    failureRedirect: `${process.env.FRONTEND_URL}/login?error=oauth_failed`
+  }),
   AuthController.googleCallback
 );
 
@@ -126,49 +68,12 @@ authRouter.get('/tokens',
  *     responses:
  *       200:
  *         description: Tokens refreshed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     idToken:
- *                       type: string
- *                     refreshToken:
- *                       type: string
- *                 message:
- *                   type: string
  *       400:
  *         description: Bad request - missing refresh token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                 message:
- *                   type: string
  *       401:
  *         description: Invalid or expired refresh token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                 message:
- *                   type: string
- *                 details:
- *                   type: string
  */
 authRouter.put('/tokens', AuthController.refreshToken);
-
 
 /**
  * @openapi
@@ -179,25 +84,22 @@ authRouter.put('/tokens', AuthController.refreshToken);
  *     summary: Authentication failure endpoint
  *     description: Endpoint called when OAuth authentication fails
  *     responses:
- *       401:
- *         description: Authentication failed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                 message:
- *                   type: string
- *                 details:
- *                   type: string
+ *       302:
+ *         description: Redirect to frontend with error
  */
 authRouter.get('/failure', AuthController.authFailure);
 
 // Global error handler for authentication routes
-authRouter.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+authRouter.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   console.error('Authentication error:', err);
+  
+  // For OAuth flow errors, redirect to frontend with error
+  if (req.path.includes('/tokens') || req.path.includes('/session')) {
+    const errorUrl = `${process.env.FRONTEND_URL}/login?error=server_error`;
+    return res.redirect(errorUrl);
+  }
+  
+  // For API endpoints, return JSON error
   res.status(500).json({
     error: 'Internal server error',
     message: 'Authentication service error',

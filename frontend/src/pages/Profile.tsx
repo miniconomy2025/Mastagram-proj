@@ -1,4 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
+
+
+type ApiUser = {
+  username?: string;
+  email?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  bio?: string;
+};
+
 import { Link } from 'react-router-dom';
 import {
   Tabs,
@@ -17,12 +28,8 @@ import {
 } from 'lucide-react';
 import { SocialPost } from '@/components/SocialPost';
 
-const userData = {
-  id: '1',
-  username: 'king👑',
-  display_name: 'Alfred Malope',
-  bio: '👨‍💻 Software Engineer | 🚀 Building scalable systems | ☕ Coffee enthusiast | 📷 Capturing moments',
-  avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+// These fields remain as mock data per instructions
+const MOCK_USER_META = {
   follower_count: 12500,
   following_count: 234,
   posts_count: 89,
@@ -85,6 +92,39 @@ const Profile = () => {
   const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
   const [showConnections, setShowConnections] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Profile state
+  const [apiUser, setApiUser] = useState<ApiUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const profileData = await api.get<ApiUser>('/profile');
+        setApiUser(profileData);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  // Compose userData from API and mock meta
+  const userData = {
+    id: '1',
+    username: apiUser?.username || 'king👑',
+    display_name: apiUser?.displayName || 'Alfred Malope',
+    bio: apiUser?.bio || '👨‍💻 Software Engineer | 🚀 Building scalable systems | ☕ Coffee enthusiast | 📷 Capturing moments',
+    avatar_url: apiUser?.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+    ...MOCK_USER_META
+  };
 
   const displayedList =
     connectionsTab === 'followers' ? followersList : followingList;
@@ -92,6 +132,13 @@ const Profile = () => {
   const filteredList = displayedList.filter((user) =>
     user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (isLoading) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading profile...</div>;
+  }
+  if (error) {
+    return <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>Failed to load profile.</div>;
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'hsl(var(--background))' }}>

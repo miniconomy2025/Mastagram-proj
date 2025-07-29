@@ -1,63 +1,129 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Settings, Camera, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useApiMutation, useApiQuery } from '@/lib/api';
 import { Label } from '@/components/ui/label';
 
-const userData = {
-  id: '1',
-  username: 'king👑',
-  display_name: 'Alfred Malope',
-  bio: '👨‍💻 Software Engineer | 🚀 Building scalable systems | ☕ Coffee enthusiast | 📷 Capturing moments',
-  avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-  verified: true
-};
+
 
 const ProfileEdit = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+
   const [formData, setFormData] = useState({
-    display_name: userData.display_name,
-    username: userData.username,
-    bio: userData.bio,
-    avatar_url: userData.avatar_url
+    displayName: '',
+    username: '',
+    bio: '',
+    avatar: null as File | null,
+    avatarPreview: ''
   });
+
+  // Types matching backend response
+  type ProfileResponse = {
+    username?: string;
+    email?: string;
+    displayName?: string;
+    avatarUrl?: string;
+    bio?: string;
+  };
+
+  type UpdateProfileResponse = {
+    success: boolean;
+    data?: ProfileResponse;
+    error?: {
+      message: string;
+      code?: string;
+      statusCode?: number;
+      details?: string[];
+    };
+  };
+
+  // Fetch user profile
+  const { data: profile, isLoading: isProfileLoading } = useApiQuery<ProfileResponse>(
+    ['profile'],
+    '/profile'
+  );
+
+  // Initialize form with fetched profile
+  useEffect(() => {
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        displayName: profile.displayName ?? '',
+        username: profile.username ?? '',
+        bio: profile.bio ?? '',
+        avatar: null,
+        avatarPreview: profile.avatarUrl ?? ''
+      }));
+    }
+  }, [profile]);
   const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Mutation for PATCH /profile
+  const updateProfile = useApiMutation<UpdateProfileResponse, FormData>(
+    'PATCH',
+    '/profile',
+    {
+      onSuccess: (data) => {
+        setIsLoading(false);
+        toast({
+          title: 'Profile updated',
+          description: 'Your changes have been saved successfully.'
+        });
+        navigate('/profile');
+      },
+      onError: (error: Error) => {
+        setIsLoading(false);
+        toast({
+          title: 'Update failed',
+          description: error?.message || 'Could not update profile.'
+        });
+      }
+    }
+  );
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate save operation
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Profile updated",
-        description: "Your changes have been saved successfully.",
-      });
-      navigate('/profile');
-    }, 1000);
+    const form = new FormData();
+    if (formData.username) form.append('username', formData.username);
+    if (formData.displayName) form.append('displayName', formData.displayName);
+    if (formData.bio) form.append('bio', formData.bio);
+    if (formData.avatar) form.append('avatar', formData.avatar);
+    updateProfile.mutate(form);
   };
 
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setFormData(prev => ({ ...prev, avatar_url: event.target?.result as string }));
-        }
-      };
-      reader.readAsDataURL(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({
+        ...prev,
+        avatar: file,
+        avatarPreview: URL.createObjectURL(file)
+      }));
     }
   };
+
+  if (isProfileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <span>Loading profile...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -95,7 +161,7 @@ const ProfileEdit = () => {
           <div className="flex flex-col items-center">
             <div className="relative mb-4">
               <img 
-                src={formData.avatar_url} 
+                src={formData.avatarPreview} 
                 alt="Profile" 
                 className="w-24 h-24 rounded-full border-2 border-primary object-cover"
               />
@@ -110,6 +176,7 @@ const ProfileEdit = () => {
                   accept="image/*"
                   onChange={handleAvatarChange}
                   className="hidden"
+                  ref={fileInputRef}
                 />
               </label>
             </div>
@@ -118,11 +185,11 @@ const ProfileEdit = () => {
           {/* Form Fields */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="display_name">Display Name</Label>
+              <Label htmlFor="displayName">Display Name</Label>
               <Input
-                id="display_name"
-                name="display_name"
-                value={formData.display_name}
+                id="displayName"
+                name="displayName"
+                value={formData.displayName}
                 onChange={handleChange}
                 className="mt-1"
               />

@@ -13,6 +13,8 @@ import ProfileEdit from "./pages/ProfileEdit";
 import Notifications from "./pages/Notifications";
 import Search from "./pages/Search";
 import CreatePost from "./pages/CreatePost";
+import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,8 @@ const App = () => (
               <Route path="/create" element={<CreatePost />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback/>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
