@@ -3,8 +3,8 @@ import { Home, Search, Plus, Heart, User } from 'lucide-react';
 import './BottomNav.css';
 
 const navigation = [
-  { name: 'Feed', href: '/feed', icon: Home },
-  { name: 'Search', href: '/', icon: Search },
+  { name: 'Home', href: '/', icon: Home },
+  { name: 'Search', href: '/search', icon: Search },
   { name: 'Create', href: '/create', icon: Plus },
   { name: 'Activity', href: '/notifications', icon: Heart },
   { name: 'Profile', href: '/profile', icon: User },
