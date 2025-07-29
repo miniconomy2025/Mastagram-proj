@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { Request } from 'express';
 
 export interface User {
   _id?: ObjectId;
@@ -38,3 +39,6 @@ export interface AuthSuccessResponse {
   data: AuthTokenResponse;
   message?: string;
 }
+
+export type RequestWithUser = Request & { user?: User };
+

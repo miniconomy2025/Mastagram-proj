@@ -1,6 +1,9 @@
+export type MediaType = 'image' | 'video';
+
 export interface S3UploadResult {
   url: string;
   key: string;
+  mediaType: MediaType;
 }
 
 export interface S3UploadError extends Error {
