@@ -30,16 +30,23 @@ const handleS3Error = (error: any, defaultMessage: string, ErrorClass: any) => {
   };
 };
 
-export async function uploadAvatarToS3(
+export async function uploadToS3(
   file: Express.Multer.File,
-  userId: string
+  userId: string,
+  type: 'avatar' | 'media'
 ): Promise<S3OperationResponse<S3UploadResult>> {
   try {
-    validateUploadFile(file, userId);
-
-    const fileExtension = path.extname(file.originalname);
-    const fileName = `avatars/${userId}/${uuidv4()}${fileExtension}`;
+    validateUploadFile(file, userId, file.mimetype.startsWith('image/') ? 'image' : 'video');
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    const randomId = uuidv4();
     
+    let fileName: string;
+    if (type === 'avatar') {
+      fileName = `avatars/${userId}/${randomId}${fileExtension}`;
+    } else {
+      fileName = `media/${userId}/${randomId}${fileExtension}`;
+    }
+
     const uploadCommand = new PutObjectCommand({
       Bucket: s3Settings.bucketName,
       Key: fileName,
@@ -60,10 +67,11 @@ export async function uploadAvatarToS3(
       data: {
         url: `${s3Settings.bucketUrl}/${fileName}`,
         key: fileName,
+        mediaType: file.mimetype.startsWith('image/') ? 'image' : 'video'
       }
     };
   } catch (error) {
-    return handleS3Error(error, 'Failed to upload avatar to S3', S3UploadError);
+    return handleS3Error(error, 'Failed to upload file to S3', S3UploadError);
   }
 }
 

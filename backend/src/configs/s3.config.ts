@@ -13,8 +13,8 @@ export const s3Client = new S3Client(s3Config);
 export const s3Settings = {
   bucketName: process.env.S3_BUCKET_NAME,
   bucketUrl: process.env.S3_BUCKET_URL,
-  maxFileSize: 5 * 1024 * 1024, // 5MB
-  allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  maxFileSize: 50 * 1024 * 1024,
+  allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/mpeg'],
 };
 
 export default s3Config;

@@ -3,7 +3,7 @@ import { ObjectId, Collection } from 'mongodb';
 import { getDb } from '../configs/mongodb.config';
 import { User } from '../types/auth.types';
 import { UpdateProfileRequest, UpdateProfileResponse } from '../types/profile.types';
-import { uploadAvatarToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils';
+import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils';
 import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators';
 
 export class ProfileController {
@@ -35,7 +35,7 @@ export class ProfileController {
     : Promise<{ success: true; url: string } | { success: false; error: UpdateProfileResponse["error"] }> {
     if (!file) return { success: true, url: currentAvatarUrl ?? '' };
 
-    const uploadResult = await uploadAvatarToS3(file, userId);
+    const uploadResult = await uploadToS3(file, userId, 'avatar');
     if (!uploadResult.success) {
       return { success: false, error: uploadResult.error! };
     }
