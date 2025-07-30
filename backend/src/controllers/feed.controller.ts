@@ -4,6 +4,10 @@ import { MediaType } from "../types/s3.types";
 import { uploadToS3 } from "../utils/s3.utils";
 import { Response } from "express";
 import { randomUUID } from "crypto";
+import redis  from "../configs/redis"; 
+import { getDb } from "../configs/mongodb.config";
+import { parseCursor } from "../utils/pagination";
+
 
 interface CreateFeedData {
     caption?: string;
@@ -23,6 +27,7 @@ export interface FeedData{
     feedType: 'media' | 'text';
     caption?: string;
     hashtags?: string[];
+    hashtags?: string[];
     content?: string;
     media?: Media[];
     createdAt: Date;
@@ -34,13 +39,16 @@ interface FeedResponse {
     failedUploads?: { filename: string; error: any }[];
 }
 
+const FEED_PAGE_LIMIT = 10;
+
 export class FeedController {
     feedQueries: FeedQueries;
     constructor() {
         this.feedQueries = new FeedQueries();
     }
-    
+
     uploadFeed = async (req: RequestWithUser, res: Response): Promise<Response> => {
+
         const userId = req.user?._id?.toString();
         if (!userId) {
             return res.status(401).json({ 
@@ -143,8 +151,15 @@ export class FeedController {
 
             if ((feedData.media && feedData.media.length > 0) || feedData.content) {
                 await this.feedQueries.saveFeedData(feedData);
-            } else {
-                // If no media or content, we don't create an empty post
+                await redis.zAdd(`feed:user:${userId}`, [
+                    {
+                      score: feedData.createdAt.getTime(),
+                      value: feedData.feedId
+                    }
+                  ]);                  
+                await redis.set(`post:${feedData.feedId}`, JSON.stringify(feedData), {
+                    EX: 60 * 30 
+                });
             }
 
             const response: FeedResponse = {
@@ -159,6 +174,7 @@ export class FeedController {
             return res.status(201).json(response);
 
         } catch (error) {
+            console.error('Error creating feed post:', error); 
             return res.status(500).json({
                 error: {
                     message: 'Failed to create feed post'
@@ -166,4 +182,90 @@ export class FeedController {
             });
         }
     }
+
+    getUserFeed = async (req: RequestWithUser, res: Response): Promise<Response> => {
+        const userId = req.user?._id?.toString();
+        if (!userId) {
+            return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        const cursor = parseCursor(req.query.cursor as string); 
+        const feedKey = `feed:user:${userId}`;
+
+        try {
+            const postIds = await redis.zrevrangebyscore(feedKey, cursor, 0, {
+                LIMIT: {
+                    offset: 0,
+                    count: FEED_PAGE_LIMIT
+                }
+            }) as string[];
+
+            const posts: FeedData[] = [];
+            const missingPostIds: string[] = [];
+
+            if (postIds.length > 0) {
+                const cachedPosts = await redis.mGet(postIds.map((id: string) => `post:${id}`));
+                for (let i = 0; i < postIds.length; i++) {
+                    const cached = cachedPosts[i];
+                    if (cached) {
+                        try {
+                            posts.push(JSON.parse(cached));
+                        } catch (parseError) {
+                            console.error(`Error parsing cached post ${postIds[i]}:`, parseError);
+                            missingPostIds.push(postIds[i]); 
+                        }
+                    } else {
+                        missingPostIds.push(postIds[i]);
+                    }
+                }
+            }
+
+
+            if (missingPostIds.length > 0) {
+                const dbPosts = await getDb().collection<FeedData>("feed").find({
+                    feedId: { $in: missingPostIds }
+                }).toArray();
+
+                for (const post of dbPosts) {
+                    posts.push(post);
+                    await redis.set(`post:${post.feedId}`, JSON.stringify(post), { EX: 1800 }); 
+                }
+            }
+
+            posts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+            const nextCursor = posts.length > 0 ? new Date(posts[posts.length - 1].createdAt).getTime() : null;
+
+            return res.json({
+                posts,
+                nextCursor
+            });
+
+        } catch (err) {
+            console.error('Error fetching user feed:', err); 
+            return res.status(500).json({ message: "Failed to fetch feed" });
+        }
+    };
+    
+    getMyPosts = async (req: RequestWithUser, res: Response): Promise<Response> => {
+        const userId = req.user?._id?.toString();
+        if (!userId) {
+            return res.status(401).json({ message: "User not authenticated" });
+        }
+    
+        try {
+            const posts = await getDb().collection<FeedData>("feed")
+                .find({ userId })
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .toArray();
+    
+            return res.json({ posts });
+        } catch (err) {
+            console.error('Error fetching user posts:', err);
+            return res.status(500).json({ message: "Failed to fetch user posts" });
+        }
+    };
+    
 }
+
