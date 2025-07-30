@@ -1,0 +1,246 @@
+.saved-container {
+  margin: 0 auto;
+  min-height: 100vh;
+  background-color: var(--background);
+}
+
+.saved-loading {
+  padding: 1rem;
+}
+
+.saved-loading > div {
+  margin-bottom: 1rem;
+}
+
+.saved-loading-header {
+  height: 2rem;
+  background-color: var(--muted);
+  border-radius: var(--radius);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.saved-loading-content > div + div {
+  margin-top: 0.75rem;
+}
+
+.saved-loading-item {
+  height: 8rem;
+  background-color: var(--muted);
+  border-radius: var(--radius);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.saved-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.saved-header-content {
+  padding: 1rem;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.saved-header-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.saved-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.saved-icon-wrapper {
+  padding: 0.5rem;
+  background-image: var(--gradient-primary);
+  border-radius: var(--radius);
+}
+
+.saved-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--primary-foreground);
+}
+
+.saved-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  color: var(--foreground);
+}
+
+.saved-subtitle {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.saved-view-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.saved-view-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.saved-content {
+  padding: 1rem;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.saved-empty {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.saved-empty-icon {
+  padding: 1rem;
+  background-color: var(--muted);
+  border-radius: 50%;
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.saved-empty-bookmark {
+  width: 2rem;
+  height: 2rem;
+  color: var(--muted-foreground);
+}
+
+.saved-empty-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.saved-empty-text {
+  color: var(--muted-foreground);
+}
+
+.saved-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.saved-grid-item {
+  position: relative;
+  cursor: pointer;
+}
+
+.saved-grid-item:hover .saved-grid-overlay {
+  opacity: 1;
+}
+
+.saved-grid-item:hover .saved-grid-unsave {
+  opacity: 1;
+}
+
+.saved-grid-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.saved-grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius);
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.saved-grid-overlay-content {
+  color: white;
+  text-align: center;
+}
+
+.saved-grid-heart {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0 auto 0.25rem;
+}
+
+.saved-grid-likes {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+}
+
+.saved-grid-unsave {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: hsl(var(--background) / 0.8);
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.saved-grid-unsave:hover {
+  background-color: var(--background);
+}
+
+.saved-grid-bookmark {
+  width: 1rem;
+  height: 1rem;
+  fill: var(--primary);
+  color: var(--primary);
+}
+
+.saved-list > div + div {
+  margin-top: 1rem;
+}
+
+.saved-list-item {
+  position: relative;
+}
+
+.saved-list-unsave {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: hsl(var(--background) / 0.8);
+}
+
+.saved-list-unsave:hover {
+  background-color: var(--background);
+}
+
+.saved-list-bookmark {
+  width: 1rem;
+  height: 1rem;
+  fill: var(--primary);
+  color: var(--primary);
+  margin-right: 0.25rem;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
