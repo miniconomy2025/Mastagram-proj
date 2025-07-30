@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { useApiQuery, api } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 type ApiUser = {
@@ -47,42 +48,6 @@ const followingList = [
   { id: '5', username: 'emily', display_name: 'Emily Davis', avatar_url: 'https://randomuser.me/api/portraits/women/4.jpg' },
 ];
 
-const userPosts = [
-  {
-    id: '1',
-    user_id: '1',
-    username: 'king👑',
-    caption: 'Beautiful sunset from my rooftop 🌅',
-    hashtags: ['sunset', 'photography', 'golden'],
-    media: [
-      {
-        id: 'm1',
-        url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
-        type: 'image',
-      }
-    ],
-    likes_count: 2534,
-    comments_count: 127,
-    created_at: '2024-01-15T10:00:00Z'
-  },
-  {
-    id: '2',
-    user_id: '1',
-    username: 'king👑',
-    caption: 'Coffee and code - perfect morning combo ☕💻',
-    hashtags: ['coffee', 'developer', 'morning'],
-    media: [
-      {
-        id: 'm2',
-        url: 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4',
-        type: 'video',
-      },
-    ],
-    likes_count: 1876,
-    comments_count: 89,
-    created_at: '2024-01-14T08:30:00Z'
-  }
-];
 
 type TabValue = 'posts' | 'liked' | 'saved';
 type ListTab = 'followers' | 'following';
@@ -92,11 +57,34 @@ const Profile = () => {
   const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
   const [showConnections, setShowConnections] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const { data, isLoading: isPostsLoading, error: postsError } = useApiQuery<{ posts: any[] }>(
+    ['user-posts'],
+    '/feed/mine'
+  );
+
   // Profile state
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  
+  const userPosts = (data?.posts ?? []).map(post => ({
+    id: post._id,
+    user_id: post.userId,
+    username: apiUser?.username || 'unknown',
+    caption: post.caption,
+    hashtags: post.hashtags,
+    media: post.media.map((m: any, index: number) => ({
+      id: `${post._id}-${index}`,
+      url: m.url,
+      type: m.mediaType,
+    })),
+    likes_count: post.likes_count ?? 0,
+    comments_count: post.comments_count ?? 0,
+    created_at: post.createdAt,
+  }));
+  
+  
 
   // Fetch user profile on component mount
   useEffect(() => {
@@ -133,9 +121,28 @@ const Profile = () => {
     user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (isLoading) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading profile...</div>;
+  if (isLoading || isPostsLoading) {
+    return (
+      <div style={{ padding: '2rem', maxWidth: '28rem', margin: '0 auto' }}>
+        {/* Skeleton for avatar */}
+        <Skeleton className="w-20 h-20 rounded-full mb-4" />
+  
+        {/* Skeleton for name */}
+        <Skeleton className="h-6 w-48 mb-2" />
+  
+        {/* Skeleton for bio */}
+        <Skeleton className="h-4 w-full mb-6" />
+  
+        {/* Skeleton list for posts */}
+        <div className="space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-48 rounded-md" />
+          ))}
+        </div>
+      </div>
+    );
   }
+  
   if (error) {
     return <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>Failed to load profile.</div>;
   }

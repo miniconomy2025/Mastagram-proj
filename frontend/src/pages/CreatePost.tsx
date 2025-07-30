@@ -1,8 +1,10 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { X, Image, Video, Hash, Smile, MapPin, ChevronLeft, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { api } from '@/lib/api';
+
 
 interface MediaItem {
   url: string;
@@ -25,16 +27,12 @@ const CreatePost = () => {
     if (!files) return;
 
     const newMedia: MediaItem[] = [];
-    
+
     Array.from(files).forEach(file => {
       const url = URL.createObjectURL(file);
       const type = file.type.startsWith('video') ? 'video' : 'image';
-      
-      newMedia.push({
-        url,
-        type,
-        file
-      });
+
+      newMedia.push({ url, type, file });
     });
 
     setMedia(prev => [...prev, ...newMedia]);
@@ -62,24 +60,32 @@ const CreatePost = () => {
     setHashtags(prev => prev.filter(t => t !== tag));
   };
 
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleSubmit = async () => {
     if (media.length === 0) return;
-    
+
     setIsUploading(true);
-    
+
+    const formData = new FormData();
+    formData.append('feedType', 'media');
+    if (caption) formData.append('caption', caption);
+    if (hashtags.length > 0) formData.append('hashtags', hashtags.join(','));
+    media.forEach(item => {
+      formData.append('media', item.file);
+    });
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      navigate('/'); // Redirect to home after successful post
+      const response = await api.post('/feed', formData);
+      navigate('/');
     } catch (error) {
       console.error('Error creating post:', error);
+      alert('Something went wrong while uploading the post.');
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
   };
 
   return (
@@ -102,11 +108,11 @@ const CreatePost = () => {
               <X className="w-6 h-6" />
             </button>
           )}
-          
+
           <h1 className="font-semibold text-foreground">
             {currentStep === 'media' ? 'New Post' : 'Edit Post'}
           </h1>
-          
+
           {currentStep === 'details' && (
             <Button 
               variant="ghost" 
@@ -134,7 +140,7 @@ const CreatePost = () => {
                 className="rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={triggerFileInput}
               >
-                Select from computer
+                Select from Device
               </Button>
             </div>
             <input
@@ -255,7 +261,7 @@ const CreatePost = () => {
                     <span className="text-sm">Add emoji</span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <MapPin className="w-5 h-5 text-muted-foreground" />
