@@ -1,0 +1,234 @@
+/* Notifications page CSS */
+
+.notifications-container {
+  min-height: 100vh;
+  background-color: hsl(var(--background));
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 1024px) {
+  .notifications-container {
+    padding-bottom: 0;
+  }
+}
+
+.notifications-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.notifications-header-content {
+  max-width: 28rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.notifications-header-back {
+  color: hsl(var(--foreground));
+}
+
+.notifications-header-back:hover {
+  opacity: 0.8;
+}
+
+.notifications-title {
+  font-family: var(--font-heading);
+  font-weight: bold;
+  font-size: 1.25rem;
+  color: hsl(var(--foreground));
+}
+
+.notifications-mark-read {
+  color: hsl(var(--primary));
+  background: transparent;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.notifications-mark-read:hover {
+  background-color: hsl(var(--muted));
+}
+
+.notifications-main {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.notifications-tabs {
+  width: 100%;
+}
+
+.notifications-tabs-list {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(4, 1fr);
+  background-color: hsl(var(--background));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.notifications-tabs-trigger {
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.notifications-tabs-trigger[data-state="active"] {
+  color: hsl(var(--primary));
+  border-bottom-color: hsl(var(--primary));
+}
+
+.notifications-tabs-trigger:hover {
+  color: hsl(var(--foreground));
+}
+
+.notifications-content {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notifications-empty {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.notifications-empty-icon {
+  width: 3rem;
+  height: 3rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0 auto 1rem;
+}
+
+.notifications-empty-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: hsl(var(--foreground));
+  margin-bottom: 0.5rem;
+}
+
+.notifications-empty-description {
+  color: hsl(var(--muted-foreground));
+}
+
+.notification-card {
+  padding: 1rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: hsl(var(--card));
+}
+
+.notification-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.notification-card.unread {
+  background-color: hsl(var(--primary) / 0.05);
+  border-color: hsl(var(--primary) / 0.2);
+}
+
+.notification-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.notification-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.notification-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.notification-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.notification-icon.like {
+  color: hsl(var(--heart-color));
+  fill: currentColor;
+}
+
+.notification-icon.comment {
+  color: hsl(var(--primary));
+}
+
+.notification-icon.follow {
+  color: hsl(var(--accent));
+}
+
+.notification-icon.mention {
+  color: hsl(var(--primary));
+}
+
+.notification-icon.default {
+  color: hsl(var(--muted-foreground));
+}
+
+.notification-unread-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: hsl(var(--primary));
+  border-radius: 50%;
+}
+
+.notification-text {
+  color: hsl(var(--foreground));
+}
+
+.notification-username {
+  font-weight: 500;
+}
+
+.notification-action {
+  color: hsl(var(--muted-foreground));
+}
+
+.notification-comment {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.notification-timestamp {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.notification-post-thumbnail {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+}
