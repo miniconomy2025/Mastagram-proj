@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useApiQuery, api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
-
-
+ 
+ 
 type ApiUser = {
   username?: string;
   email?: string;
@@ -10,7 +10,7 @@ type ApiUser = {
   avatarUrl?: string;
   bio?: string;
 };
-
+ 
 import { Link } from 'react-router-dom';
 import {
   Tabs,
@@ -28,7 +28,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { SocialPost } from '@/components/SocialPost';
-
+ 
 // These fields remain as mock data per instructions
 const MOCK_USER_META = {
   follower_count: 12500,
@@ -36,22 +36,22 @@ const MOCK_USER_META = {
   posts_count: 89,
   verified: true
 };
-
-
+ 
+ 
 const followersList = [
   { id: '2', username: 'janedoe', display_name: 'Jane Doe', avatar_url: 'https://randomuser.me/api/portraits/women/1.jpg' },
   { id: '3', username: 'alexsmith', display_name: 'Alex Smith', avatar_url: 'https://randomuser.me/api/portraits/men/2.jpg' },
 ];
-
+ 
 const followingList = [
   { id: '4', username: 'michael', display_name: 'Michael Johnson', avatar_url: 'https://randomuser.me/api/portraits/men/3.jpg' },
   { id: '5', username: 'emily', display_name: 'Emily Davis', avatar_url: 'https://randomuser.me/api/portraits/women/4.jpg' },
 ];
-
-
+ 
+ 
 type TabValue = 'posts' | 'liked' | 'saved';
 type ListTab = 'followers' | 'following';
-
+ 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState<TabValue>('posts');
   const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
@@ -61,13 +61,13 @@ const Profile = () => {
     ['user-posts'],
     '/feed/mine'
   );
-
+ 
   // Profile state
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
-  
+ 
+ 
   const userPosts = (data?.posts ?? []).map(post => ({
     id: post._id,
     user_id: post.userId,
@@ -83,9 +83,9 @@ const Profile = () => {
     comments_count: post.comments_count ?? 0,
     created_at: post.createdAt,
   }));
-  
-  
-
+ 
+ 
+ 
   // Fetch user profile on component mount
   useEffect(() => {
     const fetchProfile = async () => {
@@ -100,10 +100,10 @@ const Profile = () => {
         setIsLoading(false);
       }
     };
-
+ 
     fetchProfile();
   }, []);
-
+ 
   // Compose userData from API and mock meta
   const userData = {
     id: '1',
@@ -113,26 +113,26 @@ const Profile = () => {
     avatar_url: apiUser?.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
     ...MOCK_USER_META
   };
-
+ 
   const displayedList =
     connectionsTab === 'followers' ? followersList : followingList;
-
+ 
   const filteredList = displayedList.filter((user) =>
     user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
+ 
   if (isLoading || isPostsLoading) {
     return (
       <div style={{ padding: '2rem', maxWidth: '28rem', margin: '0 auto' }}>
         {/* Skeleton for avatar */}
         <Skeleton className="w-20 h-20 rounded-full mb-4" />
-  
+ 
         {/* Skeleton for name */}
         <Skeleton className="h-6 w-48 mb-2" />
-  
+ 
         {/* Skeleton for bio */}
         <Skeleton className="h-4 w-full mb-6" />
-  
+ 
         {/* Skeleton list for posts */}
         <div className="space-y-6">
           {[...Array(3)].map((_, i) => (
@@ -142,11 +142,11 @@ const Profile = () => {
       </div>
     );
   }
-  
+ 
   if (error) {
     return <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>Failed to load profile.</div>;
   }
-
+ 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'hsl(var(--background))' }}>
       {/* Header */}
@@ -197,7 +197,7 @@ const Profile = () => {
           </Link>
         </div>
       </header>
-
+ 
       <main style={{ maxWidth: '28rem', margin: '0 auto' }}>
         {showConnections ? (
           <>
@@ -211,7 +211,7 @@ const Profile = () => {
                 <TabsTrigger value="followers">Followers</TabsTrigger>
                 <TabsTrigger value="following">Following</TabsTrigger>
               </TabsList>
-
+ 
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -234,7 +234,7 @@ const Profile = () => {
                   }}
                 />
               </div>
-
+ 
               <TabsContent value="followers">
                 <ul style={{ display: 'grid', gap: '1rem' }}>
                   {filteredList.length > 0 ? (
@@ -270,7 +270,7 @@ const Profile = () => {
                   )}
                 </ul>
               </TabsContent>
-
+ 
               <TabsContent value="following">
                 <ul style={{ display: 'grid', gap: '1rem' }}>
                   {filteredList.length > 0 ? (
@@ -372,7 +372,7 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-
+ 
               <div>
                 <h2 style={{
                   fontWeight: 'bold',
@@ -388,7 +388,7 @@ const Profile = () => {
                 <p style={{ color: 'hsl(var(--muted-foreground))' }}>{userData.bio}</p>
               </div>
             </section>
-
+ 
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} style={{ width: '100%' }}>
               <TabsList style={{
                 display: 'grid',
@@ -406,7 +406,7 @@ const Profile = () => {
                   <Bookmark style={{ width: '1rem', height: '1rem' }} /> Saved
                 </TabsTrigger>
               </TabsList>
-
+ 
               <TabsContent value="posts">
                 <div style={{ padding: '1rem', display: 'grid', gap: '1.5rem' }}>
                   {userPosts.map(post => (
@@ -445,5 +445,5 @@ const Profile = () => {
     </div>
   );
 };
-
+ 
 export default Profile;
