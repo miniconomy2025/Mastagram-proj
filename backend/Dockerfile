@@ -1,13 +1,18 @@
-FROM node:20
+ARG NODE_VERSION=22.13.1
 
-WORKDIR /backend
+FROM node:${NODE_VERSION}-alpine
 
-COPY package*.json ./
-RUN npm install
+ENV NODE_ENV=production
+
+WORKDIR /usr/src/app
 
 COPY . .
 
-RUN npm run build
+RUN npm install -g migrate-mongo
+RUN npm install
 
-EXPOSE 5000
-CMD ["npm", "run", "start"]
+USER node
+
+EXPOSE 8000
+
+CMD ["sh", "start.sh"]
