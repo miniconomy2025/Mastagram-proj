@@ -1,10 +1,10 @@
-import { Note, PUBLIC_COLLECTION, type Federation, type RequestContext } from "@fedify/fedify";
+import { Note, PUBLIC_COLLECTION, type Context, type Federation } from "@fedify/fedify";
 import { findPostById } from "../queries/post.queries.ts";
 import type { WithId } from "mongodb";
 import type { Post } from "../models/post.models.ts";
 import { Temporal } from "@js-temporal/polyfill";
 
-function postToNote<T>(ctx: RequestContext<T>, post: WithId<Post>) {
+export function postToNote<T>(ctx: Context<T>, post: WithId<Post>) {
     const url = ctx.getObjectUri(Note, { identifier: post._id.toString() });
     
     return new Note({
@@ -13,6 +13,7 @@ function postToNote<T>(ctx: RequestContext<T>, post: WithId<Post>) {
         to: PUBLIC_COLLECTION,
         cc: ctx.getFollowersUri(post.author),
         content: post.content,
+        mediaType: 'text/html',
         published: Temporal.Instant.fromEpochMilliseconds(post.createdAt),
         url: url,
     });

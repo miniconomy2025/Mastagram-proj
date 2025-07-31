@@ -1,4 +1,4 @@
-import { Endpoints, exportJwk, generateCryptoKeyPair, importJwk, Person, type Federation, type Recipient, type RequestContext } from "@fedify/fedify";
+import { Create, Endpoints, exportJwk, generateCryptoKeyPair, importJwk, Person, type Context, type Federation, type Recipient, type RequestContext } from "@fedify/fedify";
 import { findUserByUsername, updateUserKeySet } from "../queries/user.queries.ts";
 import type { User } from "../models/user.models.ts";
 import { Temporal } from "@js-temporal/polyfill";
@@ -6,6 +6,10 @@ import logger from "../logger.ts";
 import { PAGINATION_LIMIT } from "./federation.ts";
 import { findFollowersByUsername } from "../queries/follower.queries.ts";
 import { findFollowingByUsername } from "../queries/following.queries.ts";
+import { findPostsByAuthor } from "../queries/post.queries.ts";
+import type { Post } from "../models/post.models.ts";
+import type { WithId } from "mongodb";
+import { postToNote } from "./post.dispatchers.ts";
 
 async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
     const url = ctx.getActorUri(user.username);
@@ -19,7 +23,7 @@ async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
         published: Temporal.Instant.fromEpochMilliseconds(user.createdAt),
         url: url,
         inbox: ctx.getInboxUri(user.username),
-        // outbox: ctx.getOutboxUri(user.username),
+        outbox: ctx.getOutboxUri(user.username),
         followers: ctx.getFollowersUri(user.username),
         following: ctx.getFollowingUri(user.username),
         endpoints: new Endpoints({
@@ -27,6 +31,19 @@ async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
         }),
         publicKey: keys[0].cryptographicKey,
         assertionMethods: keys.map(key => key.multikey),
+    });
+}
+
+export function postToCreate<T>(ctx: Context<T>, post: WithId<Post>) {
+    const note = postToNote(ctx, post);
+
+    return new Create({
+        id: new URL('#activity', note.id ?? undefined),
+        object: note,
+        actors: note.attributionIds,
+        tos: note.toIds,
+        ccs: note.ccIds,
+        published: note.published,
     });
 }
 
@@ -127,6 +144,27 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
         return {
             items: recipients,
             nextCursor: followings.length ? `${followings.at(-1)?.createdAt}` : null,
+        };
+    }).setFirstCursor(async () => {
+        return '' + Number.MAX_SAFE_INTEGER;
+    });
+
+    federation.setOutboxDispatcher("/users/{identifier}/outbox", async (ctx, identifier, cursorString) => {
+        let cursor = 0;
+        try {
+            cursor = parseInt(cursorString ?? '');
+        } catch {}
+
+        const posts = await findPostsByAuthor(identifier, PAGINATION_LIMIT, cursor);
+        logger.debug`GET users/${identifier}/outbox: ${posts?.length} posts`;
+
+        if (posts === null) return null;
+
+        const createActivities = posts.map(post => postToCreate(ctx, post));
+
+        return {
+            items: createActivities,
+            nextCursor: posts.length ? `${posts.at(-1)?.createdAt}` : null,
         };
     }).setFirstCursor(async () => {
         return '' + Number.MAX_SAFE_INTEGER;

@@ -18,8 +18,6 @@ export async function findFollowersByUsername(username: string, limit: number, c
         },
     }).sort('createdAt', 'desc').limit(limit);
 
-    if (!userFollowers) return null;
-
     return userFollowers.toArray();
 }
 

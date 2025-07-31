@@ -15,4 +15,4 @@ USER node
 
 EXPOSE 8000
 
-CMD ["sh", "start.sh"]
+CMD ["npm", "run", "prod"]

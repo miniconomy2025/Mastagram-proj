@@ -21,6 +21,7 @@ const config = {
     },
     app: {
         port: parseInt(process.env.APP_PORT || '8000'),
+        objectCacheTimeSeconds: parseInt(process.env.APP_OBJECT_CACHE_TIME_SECONDS || '300'),
     },
 };
 

@@ -14,18 +14,15 @@ export async function findPostById(postId: string) {
     return post;
 }
 
-export async function findPostsByAuthor(username: string, limit: number, cursor: number = 0) {
+export async function findPostsByAuthor(username: string, limit: number, cursor: number = Number.MAX_SAFE_INTEGER) {
     const posts = collection();
     
-    const userPosts = await posts
-        .find({
-            author: username,
-            createdAt: {
-                "$lt": cursor
-            },
-        })
-        .limit(limit);
-    if (!userPosts) return null;
+    const userPosts = await posts.find({
+        author: username,
+        createdAt: {
+            "$lt": cursor
+        },
+    }).sort('createdAt', 'desc').limit(limit);
 
     return userPosts.toArray();
 }

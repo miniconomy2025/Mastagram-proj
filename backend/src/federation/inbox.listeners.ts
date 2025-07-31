@@ -68,8 +68,6 @@ export function addInboxListeners<T>(federation: Federation<T>) {
         .on(Undo, async (ctx, undo) => {
             const object = await undo.getObject();
 
-            unimplemented();
-
             logger.debug`Undo activity received ${undo}`;
 
             if (object instanceof Follow) {
@@ -84,6 +82,5 @@ export function addInboxListeners<T>(federation: Federation<T>) {
             } else {
                 unimplemented(object);
             }
-        })
-        ;
+        });
 }
