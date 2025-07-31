@@ -2,8 +2,7 @@ import { Router } from "express";
 import { cachedLookupObject } from "../federation/lookup.ts";
 import federation, { createContext } from "../federation/federation.ts";
 import logger from "../logger.ts";
-import { Application, Group, isActor, Note, Organization, Person } from "@fedify/fedify";
-import base64url from "base64url";
+import { Note } from "@fedify/fedify";
 
 const postRouter = Router();
 
@@ -20,7 +19,7 @@ type FederatedPost = {
 };
 
 postRouter.get('/:noteId', async (req, res) => {
-    const noteId = base64url.default.decode(req.params.noteId);
+    const noteId = req.params.noteId;
     logger.info`fetching note ${noteId}`;
 
     const ctx = createContext(federation, req);
