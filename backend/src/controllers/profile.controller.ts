@@ -5,6 +5,9 @@ import { User } from '../types/auth.types';
 import { UpdateProfileRequest, UpdateProfileResponse } from '../types/profile.types';
 import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils';
 import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators';
+import redis from "../configs/redis"; 
+
+const PROFILE_CACHE_TTL = 1800; 
 
 export class ProfileController {
   // ---------------------- Helper Methods ----------------------
@@ -86,7 +89,40 @@ export class ProfileController {
     };
   }
 
-  // ---------------------- Route Handler ----------------------
+  // Caching GET /profile endpoint
+  static readonly getProfile = () => {
+    return async (req: Request & { user?: User }, res: Response) => {
+      const userId = ProfileController.getAuthenticatedUserId(req, res);
+      if (!userId) return;
+
+      try {
+          // 1. Try to get data from Redis cache
+          const cachedProfile = await redis.get(`profile:${userId}`);
+          if (cachedProfile) {
+              return res.status(200).json(JSON.parse(cachedProfile));
+          }
+
+          // 2. If not in cache, fetch from MongoDB
+          const usersCollection = getDb().collection('users');
+          const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+          if (!user) {
+              return res.status(404).json({ message: 'User not found' });
+          }
+
+          // 3. Cache the result for next time
+          await redis.set(`profile:${userId}`, JSON.stringify(user), { EX: PROFILE_CACHE_TTL });
+
+          return res.status(200).json(user);
+      } catch (error) {
+          console.error('Error fetching user profile:', error);
+          return res.status(500).json({ message: 'Failed to fetch user profile' });
+      }
+  };
+}
+
+
+  // Invalidate cache on update
   static readonly updateProfile = () => {
     return async (req: Request & { user?: User }, res: Response<UpdateProfileResponse>) => {
       try {
@@ -155,6 +191,9 @@ export class ProfileController {
             }
           });
         }
+    
+    //  Invalidate the profile cache after a successful update
+    await redis.del(`profile:${userId}`);
 
         // Return updated profile
         return res.status(200).json({

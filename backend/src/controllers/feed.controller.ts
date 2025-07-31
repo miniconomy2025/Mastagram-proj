@@ -4,7 +4,7 @@ import { MediaType } from "../types/s3.types";
 import { uploadToS3 } from "../utils/s3.utils";
 import { Response } from "express";
 import { randomUUID } from "crypto";
-import redis  from "../configs/redis"; 
+import redis from "../configs/redis";
 import { getDb } from "../configs/mongodb.config";
 import { parseCursor } from "../utils/pagination";
 
@@ -39,6 +39,7 @@ interface FeedResponse {
 }
 
 const FEED_PAGE_LIMIT = 10;
+const MY_POSTS_CACHE_TTL = 900; // 15 minutes
 
 export class FeedController {
     feedQueries: FeedQueries;
@@ -50,8 +51,8 @@ export class FeedController {
 
         const userId = req.user?._id?.toString();
         if (!userId) {
-            return res.status(401).json({ 
-                message: 'User not authenticated' 
+            return res.status(401).json({
+                message: 'User not authenticated'
             });
         }
 
@@ -66,7 +67,7 @@ export class FeedController {
 
         if (feedType === 'media') {
             if (!files || files.length === 0) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: {
                         message: 'Media files are required for media posts',
                     }
@@ -74,20 +75,20 @@ export class FeedController {
             }
         } else if (feedType === 'text') {
             if (!content || content.trim() === '') {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: {
                         message: 'Content is required for text posts'
                     }
                 });
             } if (content.length > 250) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: {
                         message: 'Content exceeds maximum length of 250 characters'
                     }
                 });
             }
         } else {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: {
                     message: 'Invalid post type. Must be either "media" or "text"'
                 }
@@ -152,13 +153,16 @@ export class FeedController {
                 await this.feedQueries.saveFeedData(feedData);
                 await redis.zAdd(`feed:user:${userId}`, [
                     {
-                      score: feedData.createdAt.getTime(),
-                      value: feedData.feedId
+                        score: feedData.createdAt.getTime(),
+                        value: feedData.feedId
                     }
-                  ]);                  
+                ]);
                 await redis.set(`post:${feedData.feedId}`, JSON.stringify(feedData), {
-                    EX: 60 * 30 
+                    EX: 60 * 30
                 });
+                
+                // Invalidate the user's my-posts cache
+                await redis.del(`myposts:${userId}`);
             }
 
             const response: FeedResponse = {
@@ -173,7 +177,7 @@ export class FeedController {
             return res.status(201).json(response);
 
         } catch (error) {
-            console.error('Error creating feed post:', error); 
+            console.error('Error creating feed post:', error);
             return res.status(500).json({
                 error: {
                     message: 'Failed to create feed post'
@@ -188,7 +192,7 @@ export class FeedController {
             return res.status(401).json({ message: "User not authenticated" });
         }
 
-        const cursor = parseCursor(req.query.cursor as string); 
+        const cursor = parseCursor(req.query.cursor as string);
         const feedKey = `feed:user:${userId}`;
 
         try {
@@ -211,7 +215,7 @@ export class FeedController {
                             posts.push(JSON.parse(cached));
                         } catch (parseError) {
                             console.error(`Error parsing cached post ${postIds[i]}:`, parseError);
-                            missingPostIds.push(postIds[i]); 
+                            missingPostIds.push(postIds[i]);
                         }
                     } else {
                         missingPostIds.push(postIds[i]);
@@ -227,7 +231,7 @@ export class FeedController {
 
                 for (const post of dbPosts) {
                     posts.push(post);
-                    await redis.set(`post:${post.feedId}`, JSON.stringify(post), { EX: 1800 }); 
+                    await redis.set(`post:${post.feedId}`, JSON.stringify(post), { EX: 1800 });
                 }
             }
 
@@ -241,11 +245,12 @@ export class FeedController {
             });
 
         } catch (err) {
-            console.error('Error fetching user feed:', err); 
+            console.error('Error fetching user feed:', err);
             return res.status(500).json({ message: "Failed to fetch feed" });
         }
     };
     
+    // This method now uses caching.
     getMyPosts = async (req: RequestWithUser, res: Response): Promise<Response> => {
         const userId = req.user?._id?.toString();
         if (!userId) {
@@ -253,11 +258,26 @@ export class FeedController {
         }
     
         try {
+            // 1. Check Redis for cached posts
+            const cachedPosts = await redis.get(`myposts:${userId}`);
+            if (cachedPosts) {
+                console.log('✅ Redis HIT for getMyPosts', JSON.parse(cachedPosts));
+                return res.json({ posts: JSON.parse(cachedPosts) });
+            }else{
+            console.log('❌ Redis MISS for getMyPosts, querying MongoDB');
+}
+
+            // 2. If not in cache, fetch from MongoDB
             const posts = await getDb().collection<FeedData>("feed")
                 .find({ userId })
                 .sort({ createdAt: -1 })
                 .limit(50)
                 .toArray();
+    
+            // 3. Store the result in Redis with a TTL
+            if (posts.length > 0) {
+                await redis.set(`myposts:${userId}`, JSON.stringify(posts), { EX: MY_POSTS_CACHE_TTL });
+            }
     
             return res.json({ posts });
         } catch (err) {
@@ -265,6 +285,4 @@ export class FeedController {
             return res.status(500).json({ message: "Failed to fetch user posts" });
         }
     };
-    
 }
-
