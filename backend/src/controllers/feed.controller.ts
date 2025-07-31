@@ -27,7 +27,6 @@ export interface FeedData{
     feedType: 'media' | 'text';
     caption?: string;
     hashtags?: string[];
-    hashtags?: string[];
     content?: string;
     media?: Media[];
     createdAt: Date;
