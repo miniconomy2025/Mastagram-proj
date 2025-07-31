@@ -9,6 +9,7 @@ import apiRouter from './routers';
 import { getDb, initMongo } from './configs/mongodb.config';
 import appConfig from './configs/app.config';
 import { setupSwaggerDocs } from './configs/swagger';
+import { initRedis } from './configs/redis';
 
 // GraphQL imports
 import { typeDefs } from './schema';
@@ -22,7 +23,7 @@ setupSwaggerDocs(app);
 
 // Setup CORS
 const allowedOrigins = [
-  'http://localhost:8081', 
+  'http://localhost:8080', 
 ];
 app.use(cors({
   origin: (origin, callback) => {
@@ -127,6 +128,10 @@ async function startServer() {
   try {
     // Initialize MongoDB
     await initMongo();
+
+    // Initialize Redis
+
+    await initRedis(); 
     
     // Setup ActivityPub store
     apex.store.db = getDb();
@@ -134,6 +139,7 @@ async function startServer() {
     
     // Setup GraphQL
     await setupGraphQL();
+
     
     // Start the server
     await new Promise<void>((resolve) =>
