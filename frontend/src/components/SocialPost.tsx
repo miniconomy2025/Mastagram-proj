@@ -1,18 +1,11 @@
 import { useState, useRef } from 'react';
 import {
-  Heart,
-  MessageCircle,
-  Share,
-  MoreHorizontal,
-  Bookmark,
-  UserPlus,
-  UserMinus,
-  ChevronLeft,
-  ChevronRight
+  Heart, MessageCircle, Share, MoreHorizontal,
+  Bookmark, UserPlus, UserMinus, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { useSocialActions } from '@/hooks/useSocialActions';
+import './SocialPost.css';
 
 interface Media {
   url: string;
@@ -81,7 +74,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/post/${post.id}`;
-
     if (navigator.share) {
       try {
         await navigator.share({
@@ -93,7 +85,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
         console.error('Share failed:', err);
       }
     } else {
-      // Fallback for unsupported browsers
       try {
         await navigator.clipboard.writeText(shareUrl);
         alert('Link copied to clipboard!');
@@ -102,7 +93,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
       }
     }
   };
-
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
@@ -123,13 +113,8 @@ export const SocialPost = ({ post }: SocialPostProps) => {
       const touch = endEvent.changedTouches[0];
       const diff = touch.clientX - startX;
 
-      if (diff > 50) {
-        // Swiped right
-        handleSwipe('right');
-      } else if (diff < -50) {
-        // Swiped left
-        handleSwipe('left');
-      }
+      if (diff > 50) handleSwipe('right');
+      else if (diff < -50) handleSwipe('left');
 
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
@@ -140,171 +125,101 @@ export const SocialPost = ({ post }: SocialPostProps) => {
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-card border border-border overflow-hidden animate-slide-up">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-bold">
-            {post.username.charAt(0).toUpperCase()}
-          </div>
+    <div className="sp-card">
+      <div className="sp-header">
+        <div className="sp-user-info">
+          <div className="sp-avatar">{post.username.charAt(0).toUpperCase()}</div>
           <div>
-            <p className="font-heading font-semibold text-foreground">@{post.username}</p>
-            <p className="text-sm text-muted-foreground">
-              {new Date(post.created_at).toLocaleDateString()}
-            </p>
+            <p className="sp-username">@{post.username}</p>
+            <p className="sp-date">{new Date(post.created_at).toLocaleDateString()}</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleFollow}
-            className={userFollowing ? "text-primary" : "text-muted-foreground hover:text-primary"}
-          >
-            {userFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+        <div className="sp-controls">
+          <button onClick={handleFollow} className={`sp-follow-btn ${userFollowing ? 'active' : ''}`}>
+            {userFollowing ? <UserMinus /> : <UserPlus />}
             {userFollowing ? 'Following' : 'Follow'}
-          </Button>
-          <button className="text-muted-foreground hover:text-foreground transition-colors">
-            <MoreHorizontal className="w-5 h-5" />
           </button>
+          <button className="sp-icon-btn"><MoreHorizontal /></button>
         </div>
       </div>
 
-      {/* Caption */}
       {post.caption && (
-        <div className="px-4 pb-3">
-          <p className="text-foreground leading-relaxed">{post.caption}</p>
+        <div className="sp-caption">
+          <p>{post.caption}</p>
           {post.hashtags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="sp-tags">
               {post.hashtags.map((tag, index) => (
-                <span key={index} className="text-primary text-sm font-medium">
-                  #{tag}
-                </span>
+                <span key={index}>#{tag}</span>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Media Gallery */}
       {post.media?.length > 0 && (
-        <div className="relative w-full">
+        <div className="sp-media-wrapper">
           <div
+            className="sp-media-slider"
             ref={mediaContainerRef}
-            className="relative w-full overflow-hidden"
             onTouchStart={handleTouchStart}
+            style={{ transform: `translateX(-${currentMediaIndex * 100}%)` }}
           >
-            <div
-              className="flex transition-transform duration-300 ease-out"
-              style={{
-                transform: `translateX(-${currentMediaIndex * 100}%)`,
-                // width: `${post.media.length * 100}%`
-              }}
-            >
-              {post.media.map((item, index) => (
-                <div
-                  key={index}
-                  className="w-full flex-shrink-0 relative"
-                >
-                  {item.type === 'image' ? (
-                    <img
-                      src={item.url}
-                      alt={`Post media ${index + 1}`}
-                      className="w-full h-auto max-h-96 object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                    />
-                  ) : (
-                    <video
-                      src={item.url}
-                      controls
-                      preload="metadata" 
-                      playsInline
-                      className="w-full max-h-96 object-cover"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
+            {post.media.map((item, index) => (
+              <div key={index} className="sp-media-item">
+                {item.type === 'image' ? (
+                  <img src={item.url} alt={`media-${index}`} />
+                ) : (
+                  <video src={item.url} controls playsInline preload="metadata" />
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* Navigation Arrows (for desktop) */}
           {post.media.length > 1 && (
             <>
               <button
+                className={`sp-arrow left ${currentMediaIndex === 0 ? 'disabled' : ''}`}
                 onClick={() => handleSwipe('right')}
-                disabled={currentMediaIndex === 0}
-                className={`absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-2 transition-opacity ${currentMediaIndex === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
-                  }`}
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft />
               </button>
               <button
+                className={`sp-arrow right ${currentMediaIndex === post.media.length - 1 ? 'disabled' : ''}`}
                 onClick={() => handleSwipe('left')}
-                disabled={currentMediaIndex === post.media.length - 1}
-                className={`absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-2 transition-opacity ${currentMediaIndex === post.media.length - 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'
-                  }`}
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight />
               </button>
+              <div className="sp-dots">
+                {post.media.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentMediaIndex(i)}
+                    className={i === currentMediaIndex ? 'active' : ''}
+                    aria-label={`Go to media ${i + 1}`}
+                  />
+                ))}
+              </div>
             </>
-          )}
-
-          {/* Media Indicators */}
-          {post.media.length > 1 && (
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
-              {post.media.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentMediaIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${index === currentMediaIndex
-                    ? 'bg-white w-3'
-                    : 'bg-white/50 hover:bg-white/70'
-                    }`}
-                  aria-label={`Go to media ${index + 1}`}
-                />
-              ))}
-            </div>
           )}
         </div>
       )}
 
-      {/* Actions */}
-      <div className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <button
-              onClick={handleLike}
-              className={`flex items-center space-x-2 transition-all duration-300 ${isLiked
-                ? 'text-heart animate-heart-beat'
-                : 'text-muted-foreground hover:text-heart'
-                }`}
-            >
-              <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="font-medium">{likesCount}</span>
-            </button>
-
-            <Link to={`/post/${post.id}`}>
-              <button className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
-                <MessageCircle className="w-6 h-6" />
-                <span className="font-medium">{post.comments_count}</span>
-              </button>
-            </Link>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSave}
-              className={`${isPostSaved ? 'text-primary' : 'text-muted-foreground hover:text-foreground'} transition-colors`}
-            >
-              <Bookmark className={`w-6 h-6 ${isPostSaved ? 'fill-current' : ''}`} />
-            </Button>
-            <button
-              onClick={handleShare}
-              className="text-muted-foreground hover:text-foreground transition-colors">
-              <Share className="w-6 h-6" />
-            </button>
-          </div>
+      <div className="sp-actions">
+        <div className="sp-left-actions">
+          <button onClick={handleLike} className={`sp-icon-btn ${isLiked ? 'liked' : ''}`}>
+            <Heart className={isLiked ? 'filled' : ''} />
+            <span>{likesCount}</span>
+          </button>
+          <Link to={`/post/${post.id}`} className="sp-icon-btn">
+            <MessageCircle />
+            <span>{post.comments_count}</span>
+          </Link>
+        </div>
+        <div className="sp-right-actions">
+          <button onClick={handleSave} className={`sp-icon-btn ${isPostSaved ? 'saved' : ''}`}>
+            <Bookmark className={isPostSaved ? 'filled' : ''} />
+          </button>
+          <button onClick={handleShare} className="sp-icon-btn"><Share /></button>
         </div>
       </div>
     </div>

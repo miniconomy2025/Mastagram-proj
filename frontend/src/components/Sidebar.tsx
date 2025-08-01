@@ -56,11 +56,12 @@ export const Sidebar = () => {
 
       {/* Create Post Button */}
       <div className="create-post-container">
-        <button className="create-post-button">
-          <Plus className="create-post-icon" />
-          Create Post
-        </button>
+      <NavLink to="/create" className="create-post-button">
+        <Plus className="create-post-icon" />
+         Create Post
+      </NavLink>
       </div>
+      
 
       {/* User Profile */}
       <div className="user-profile-container">

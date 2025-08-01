@@ -1,0 +1,148 @@
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background-color: rgba(0, 0, 0, 0.8);
+    animation: fadeIn 300ms ease-out forwards;
+  }
+  
+  .sheet-content {
+    position: fixed;
+    z-index: 51;
+    background-color: #1f2937; /* dark gray */
+    padding: 1.5rem;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    color: white;
+  }
+  
+  /* Sides */
+  .sheet-side-top {
+    top: 0;
+    left: 0;
+    right: 0;
+    border-bottom: 1px solid #374151;
+    animation: slideInFromTop 300ms ease-out forwards;
+  }
+  .sheet-side-bottom {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-top: 1px solid #374151;
+    animation: slideInFromBottom 300ms ease-out forwards;
+  }
+  .sheet-side-left {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 75%;
+    max-width: 400px;
+    height: 100%;
+    border-right: 1px solid #374151;
+    animation: slideInFromLeft 300ms ease-out forwards;
+  }
+  .sheet-side-right {
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 75%;
+    max-width: 400px;
+    height: 100%;
+    border-left: 1px solid #374151;
+    animation: slideInFromRight 300ms ease-out forwards;
+  }
+  
+  .sheet-close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .sheet-close-button:hover {
+    opacity: 1;
+  }
+  .sheet-close-icon {
+    width: 1rem;
+    height: 1rem;
+    color: #9ca3af;
+  }
+  
+  /* Header/Footer/Text */
+  .sheet-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  @media (min-width: 640px) {
+    .sheet-header {
+      text-align: left;
+    }
+  }
+  .sheet-footer {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+  @media (min-width: 640px) {
+    .sheet-footer {
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+  }
+  .sheet-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+  .sheet-description {
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+  
+  /* Animations */
+  @keyframes slideInFromRight {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0%);
+    }
+  }
+  @keyframes slideInFromLeft {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0%);
+    }
+  }
+  @keyframes slideInFromTop {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(0%);
+    }
+  }
+  @keyframes slideInFromBottom {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0%);
+    }
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
