@@ -68,8 +68,8 @@
   }
   
   .sp-follow-btn.active {
-    color: #00b0ff;
-    border-color: #00b0ff;
+    color: hsl(var(--primary));
+    border-color: hsl(var(--primary));
   }
   
   .sp-icon-btn {
@@ -105,7 +105,7 @@
   }
   
   .sp-tags span {
-    color: #00b0ff;
+    color: hsl(var(--primary));
     font-size: 0.85rem;
   }
   
@@ -186,7 +186,7 @@
   }
   
   .sp-dots button.active {
-    background: #00b0ff;
+    background: hsl(var(--primary));
   }
   
   /* Action bar */
@@ -209,7 +209,7 @@
   }
   
   .sp-icon-btn.saved svg {
-    stroke: #00b0ff;
-    fill: #00b0ff;
+    stroke: hsl(var(--primary));
+    fill: hsl(var(--primary));
   }
   

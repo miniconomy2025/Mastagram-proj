@@ -1,9 +1,8 @@
 import { useState, useRef } from 'react';
-import { X, Image, Video, Hash, Smile, MapPin, ChevronLeft, Plus } from 'lucide-react';
+import { X, Image, ChevronLeft, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
+import './CreatePost.css';
 
 interface MediaItem {
   url: string;
@@ -20,18 +19,16 @@ const CreatePost = () => {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [currentStep, setCurrentStep] = useState<'media' | 'details'>('media');
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0); // Added state for tracking current preview index
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
     const newMedia: MediaItem[] = [];
-
     Array.from(files).forEach(file => {
       const url = URL.createObjectURL(file);
       const type = file.type.startsWith('video') ? 'video' : 'image';
-
       newMedia.push({ url, type, file });
     });
 
@@ -78,7 +75,6 @@ const CreatePost = () => {
     if (media.length === 0) return;
 
     setIsUploading(true);
-
     const formData = new FormData();
     formData.append('feedType', 'media');
     if (caption) formData.append('caption', caption);
@@ -89,157 +85,160 @@ const CreatePost = () => {
 
     try {
       await api.post('/feed', formData);
-      navigate('/');
+      navigate('/profile');
     } catch (error) {
       console.error('Error creating post:', error);
-      alert('Something went wrong while uploading the post.');
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-background border-b border-border">
-        <div className="max-w-md mx-auto p-4 flex items-center justify-between">
+    <div className="create-post">
+      {isUploading && (
+        <div className="upload-overlay">
+          <div className="spinner-wrapper">
+            <div className="spinner"></div>
+            <span>Sharing...</span>
+          </div>
+        </div>
+      )}
+
+
+      <div className="header">
+        <div className="header-content">
           {currentStep === 'details' ? (
             <button
               onClick={() => setCurrentStep('media')}
-              className="text-muted-foreground hover:text-foreground"
+              className="header-button"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="icon" />
             </button>
           ) : (
             <button
               onClick={() => navigate(-1)}
-              className="text-muted-foreground hover:text-foreground"
+              className="header-button"
             >
-              <X className="w-6 h-6" />
+              <X className="icon" />
             </button>
           )}
 
-          <h1 className="font-semibold text-foreground">
+          <h1 className="header-title">
             {currentStep === 'media' ? 'New Post' : 'Edit Post'}
           </h1>
 
           {currentStep === 'details' && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={handleSubmit}
               disabled={isUploading}
-              className="text-primary font-semibold hover:bg-transparent"
+              className="share-button"
             >
-              {isUploading ? 'Sharing...' : 'Share'}
-            </Button>
+              Share
+            </button>
           )}
         </div>
       </div>
 
-      <main className="max-w-md mx-auto">
+      <main className="main-content">
         {currentStep === 'media' ? (
-          <div className="flex flex-col items-center justify-center h-[70vh]">
-            <div className="flex flex-col items-center justify-center space-y-6 p-8">
-              <div className="p-4 bg-muted rounded-full">
-                <Image className="w-8 h-8 text-foreground" />
+          <div className="media-selection">
+            <div className="media-selection-content">
+              <div className="image-icon-container">
+                <Image className="image-icon" />
               </div>
-              <h3 className="text-xl font-medium text-foreground">Drag photos and videos here</h3>
-              <Button
-                variant="outline"
-                className="rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+              <h3 className="media-title">Drag photos and videos here</h3>
+              <button
+                className="select-button"
                 onClick={triggerFileInput}
               >
                 Select from Device
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col">
-            {/* Media Preview */}
-            <div className="relative aspect-square bg-black">
+          <div className="details-step">
+            <div className="media-preview">
               {media[currentMediaIndex]?.type === 'image' ? (
                 <img
                   src={media[currentMediaIndex].url}
                   alt={`Post preview ${currentMediaIndex}`}
-                  className="w-full h-full object-contain"
+                  className="preview-media"
                 />
               ) : (
                 <video
                   src={media[currentMediaIndex].url}
-                  className="w-full h-full object-contain"
+                  className="preview-media"
                   controls
                 />
               )}
             </div>
 
-            {/* Caption and Details */}
-            <div className="p-4 space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 rounded-full bg-muted flex-shrink-0"></div>
-                <Textarea
+            <div className="details-content">
+              <div className="caption-section">
+                <div className="avatar"></div>
+                <textarea
                   placeholder="Write a caption..."
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  className="border-none resize-none min-h-[60px] p-0 focus-visible:ring-0"
+                  className="caption-textarea"
                 />
               </div>
 
-              <div className="flex items-center space-x-2 overflow-x-auto py-2">
+              <div className="thumbnails-section">
                 {media.map((item, index) => (
                   <div
                     key={index}
                     onClick={() => setCurrentMediaIndex(index)}
-                    className="relative flex-shrink-0 w-16 h-16 cursor-pointer"
+                    className="thumbnail-container"
                   >
                     {item.type === 'image' ? (
                       <img
                         src={item.url}
-                        alt={`Thumbnail ${index}`}
-                        className="w-full h-full object-cover rounded"
+                        alt=""
+                        className="thumbnail"
                       />
                     ) : (
                       <video
                         src={item.url}
-                        className="w-full h-full object-cover rounded"
+                        className="thumbnail"
                       />
                     )}
                     <button
+                      className="remove-thumbnail"
                       onClick={(e) => {
                         e.stopPropagation();
                         removeMedia(index);
                       }}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="remove-icon" />
                     </button>
                   </div>
                 ))}
                 <button
                   onClick={triggerFileInput}
-                  className="flex-shrink-0 w-16 h-16 border border-dashed border-muted rounded flex items-center justify-center"
+                  className="add-media-button"
                   title="Add more media"
                 >
-                  <Plus className="w-5 h-5 text-muted-foreground" />
+                  <Plus className="add-icon" />
                 </button>
               </div>
 
-              <div className="border-t pt-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Add hashtags</span>
-                  <div className="flex items-center space-x-2">
+              <div className="options-section">
+                <div className="hashtag-section">
+                  <span className="section-label">Add hashtags</span>
+                  <div className="hashtag-input-container">
                     <input
                       type="text"
                       placeholder="#example"
                       value={currentHashtag}
                       onChange={(e) => setCurrentHashtag(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && addHashtag()}
-                      className="bg-transparent border-none outline-none text-sm text-right placeholder:text-muted-foreground"
+                      className="hashtag-input"
                     />
                     <button
                       onClick={addHashtag}
                       disabled={!currentHashtag.trim()}
-                      className="text-primary disabled:text-muted-foreground"
+                      className="add-hashtag-button"
                     >
                       Add
                     </button>
@@ -247,48 +246,30 @@ const CreatePost = () => {
                 </div>
 
                 {hashtags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="hashtags-display">
                     {hashtags.map((tag) => (
-                      <div
-                        key={tag}
-                        className="flex items-center bg-muted px-3 py-1 rounded-full text-sm"
-                      >
+                      <div key={tag} className="hashtag-chip">
                         #{tag}
                         <button
                           onClick={() => removeHashtag(tag)}
-                          className="ml-2 text-muted-foreground hover:text-foreground"
+                          className="remove-hashtag"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="remove-hashtag-icon" />
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
-
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Smile className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm">Add emoji</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm">Add location</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Hidden File Input */}
         <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
-          className="hidden"
+          className="hidden-input"
           accept="image/*,video/*"
           multiple
         />
