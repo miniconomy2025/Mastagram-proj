@@ -1,18 +1,11 @@
-import './SocialPost.css';
 import { useState, useRef } from 'react';
 import {
-  Heart,
-  MessageCircle,
-  Share,
-  MoreHorizontal,
-  Bookmark,
-  UserPlus,
-  UserMinus,
-  ChevronLeft,
-  ChevronRight
+  Heart, MessageCircle, Share, MoreHorizontal,
+  Bookmark, UserPlus, UserMinus, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSocialActions } from '@/hooks/useSocialActions';
+import './SocialPost.css';
 
 interface Media {
   url: string;
@@ -81,7 +74,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/post/${post.id}`;
-
     if (navigator.share) {
       try {
         await navigator.share({
@@ -121,11 +113,8 @@ export const SocialPost = ({ post }: SocialPostProps) => {
       const touch = endEvent.changedTouches[0];
       const diff = touch.clientX - startX;
 
-      if (diff > 50) {
-        handleSwipe('right');
-      } else if (diff < -50) {
-        handleSwipe('left');
-      }
+      if (diff > 50) handleSwipe('right');
+      else if (diff < -50) handleSwipe('left');
 
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
@@ -136,59 +125,51 @@ export const SocialPost = ({ post }: SocialPostProps) => {
   };
 
   return (
-    <div className="social-post">
-      {/* Header */}
-      <div className="post-header">
-        <div className="post-user">
-          <div className="post-avatar">{post.username.charAt(0).toUpperCase()}</div>
-          <div className="post-user-info">
-            <p className="username">@{post.username}</p>
-            <p className="date">{new Date(post.created_at).toLocaleDateString()}</p>
+    <div className="sp-card">
+      <div className="sp-header">
+        <div className="sp-user-info">
+          <div className="sp-avatar">{post.username.charAt(0).toUpperCase()}</div>
+          <div>
+            <p className="sp-username">@{post.username}</p>
+            <p className="sp-date">{new Date(post.created_at).toLocaleDateString()}</p>
           </div>
         </div>
-        <div className="post-actions-header">
-          <button
-            onClick={handleFollow}
-            className={`follow-btn ${userFollowing ? 'following' : ''}`}
-          >
-            {userFollowing ? <UserMinus className="icon-sm" /> : <UserPlus className="icon-sm" />}
+        <div className="sp-controls">
+          <button onClick={handleFollow} className={`sp-follow-btn ${userFollowing ? 'active' : ''}`}>
+            {userFollowing ? <UserMinus /> : <UserPlus />}
             {userFollowing ? 'Following' : 'Follow'}
           </button>
-          <button className="icon-button">
-            <MoreHorizontal className="icon-md" />
-          </button>
+          <button className="sp-icon-btn"><MoreHorizontal /></button>
         </div>
       </div>
 
-      {/* Caption */}
       {post.caption && (
-        <div className="post-caption">
+        <div className="sp-caption">
           <p>{post.caption}</p>
           {post.hashtags.length > 0 && (
-            <div className="hashtags">
-              {post.hashtags.map((tag, idx) => (
-                <Link to={`/tags/${tag}`} key={idx} className="hashtag">
-                  #{tag}
-                </Link>
+            <div className="sp-tags">
+              {post.hashtags.map((tag, index) => (
+                <span key={index}>#{tag}</span>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Media */}
       {post.media?.length > 0 && (
-        <div className="media-gallery" onTouchStart={handleTouchStart} ref={mediaContainerRef}>
+        <div className="sp-media-wrapper">
           <div
-            className="media-track"
+            className="sp-media-slider"
+            ref={mediaContainerRef}
+            onTouchStart={handleTouchStart}
             style={{ transform: `translateX(-${currentMediaIndex * 100}%)` }}
           >
-            {post.media.map((media, index) => (
-              <div key={index} className="media-item">
-                {media.type === 'image' ? (
-                  <img src={media.url} alt={`media-${index}`} />
+            {post.media.map((item, index) => (
+              <div key={index} className="sp-media-item">
+                {item.type === 'image' ? (
+                  <img src={item.url} alt={`media-${index}`} />
                 ) : (
-                  <video src={media.url} controls playsInline />
+                  <video src={item.url} controls playsInline preload="metadata" />
                 )}
               </div>
             ))}
@@ -196,18 +177,25 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
           {post.media.length > 1 && (
             <>
-              <button onClick={() => handleSwipe('right')} disabled={currentMediaIndex === 0} className="nav-button left">
+              <button
+                className={`sp-arrow left ${currentMediaIndex === 0 ? 'disabled' : ''}`}
+                onClick={() => handleSwipe('right')}
+              >
                 <ChevronLeft />
               </button>
-              <button onClick={() => handleSwipe('left')} disabled={currentMediaIndex === post.media.length - 1} className="nav-button right">
+              <button
+                className={`sp-arrow right ${currentMediaIndex === post.media.length - 1 ? 'disabled' : ''}`}
+                onClick={() => handleSwipe('left')}
+              >
                 <ChevronRight />
               </button>
-              <div className="media-dots">
+              <div className="sp-dots">
                 {post.media.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => setCurrentMediaIndex(i)}
-                    className={`dot ${i === currentMediaIndex ? 'active' : ''}`}
+                    className={i === currentMediaIndex ? 'active' : ''}
+                    aria-label={`Go to media ${i + 1}`}
                   />
                 ))}
               </div>
@@ -216,25 +204,22 @@ export const SocialPost = ({ post }: SocialPostProps) => {
         </div>
       )}
 
-      {/* Footer Actions */}
-      <div className="post-footer">
-        <div className="left-actions">
-          <button onClick={handleLike} className={`icon-button ${isLiked ? 'liked' : ''}`}>
-            <Heart className={`icon-lg ${isLiked ? 'filled' : ''}`} />
+      <div className="sp-actions">
+        <div className="sp-left-actions">
+          <button onClick={handleLike} className={`sp-icon-btn ${isLiked ? 'liked' : ''}`}>
+            <Heart className={isLiked ? 'filled' : ''} />
             <span>{likesCount}</span>
           </button>
-          <Link to={`/post/${post.id}`} className="icon-button">
-            <MessageCircle className="icon-lg" />
+          <Link to={`/post/${post.id}`} className="sp-icon-btn">
+            <MessageCircle />
             <span>{post.comments_count}</span>
           </Link>
         </div>
-        <div className="right-actions">
-          <button onClick={handleSave} className={`icon-button ${isPostSaved ? 'saved' : ''}`}>
-            <Bookmark className="icon-lg" />
+        <div className="sp-right-actions">
+          <button onClick={handleSave} className={`sp-icon-btn ${isPostSaved ? 'saved' : ''}`}>
+            <Bookmark className={isPostSaved ? 'filled' : ''} />
           </button>
-          <button onClick={handleShare} className="icon-button">
-            <Share className="icon-lg" />
-          </button>
+          <button onClick={handleShare} className="sp-icon-btn"><Share /></button>
         </div>
       </div>
     </div>
