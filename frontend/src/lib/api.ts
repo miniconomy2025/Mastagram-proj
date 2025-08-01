@@ -177,7 +177,18 @@ export function useApiQuery<T = unknown, E = Error>(
 ) {
   return useQuery<T, E>({
     queryKey: key,
-    queryFn: () => api.get<T>(endpoint),
+    queryFn: async () => {
+      try {
+        return await api.get<T>(endpoint);
+      } catch (error) {
+        // Ensure 401 errors that failed refresh always redirect
+        if ((error as any).status === 401) {
+          auth.logout();
+          return null;
+        }
+        throw error;
+      }
+    },
     retry: (failureCount, error: E & { status?: number }) => 
       error?.status === 401 || error?.status === 403 ? false : failureCount < 3,
     ...options
