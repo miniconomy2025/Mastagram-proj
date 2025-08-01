@@ -1,9 +1,8 @@
-import { Router, Request, Response } from 'express';
-import { ensureAuthenticated } from '../configs/passport.config';
-import { ProfileResponse } from '../types/profile.types';
-import { User } from '../types/auth.types';
-import { ProfileController } from '../controllers/profile.controller';
-import upload from '../configs/multer.config';
+import { Router, type Request, type Response } from 'express';
+import { ensureAuthenticated } from '../configs/passport.config.ts';
+import { type ProfileResponse } from '../types/profile.types.ts';
+import { ProfileController } from '../controllers/profile.controller.ts';
+import upload from '../configs/multer.config.ts';
 
 const profileRouter = Router();
 
@@ -56,7 +55,7 @@ const profileRouter = Router();
 profileRouter.get(
   '/',
   ensureAuthenticated,
-  (req: Request & { user?: User }, res: Response<ProfileResponse | { error: string }>) => {
+  (req: Request, res: Response<ProfileResponse | { error: string }>) => {
     if (!req.user) {
       return res.status(401).json({ error: 'User not authenticated' });
     }

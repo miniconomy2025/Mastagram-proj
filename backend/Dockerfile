@@ -1,13 +1,17 @@
-FROM node:20
+ARG NODE_VERSION=22.13.1
 
-WORKDIR /backend
+FROM node:${NODE_VERSION}-alpine
 
-COPY package*.json ./
-RUN npm install
+USER node
+
+ENV NODE_ENV=production
+
+WORKDIR /usr/src/app
 
 COPY . .
 
-RUN npm run build
+RUN ["npm", "install"]
 
 EXPOSE 3500
-CMD ["npm", "run", "start"]
+
+CMD ["npm", "run", "prod"]

@@ -1,6 +1,6 @@
-import { s3Settings } from '../../configs/s3.config';
-import { MediaType } from '../../types/s3.types';
-import { S3ValidationError } from '../errors/s3.errors';
+import { s3Settings } from '../../configs/s3.config.ts';
+import type { MediaType } from '../../types/s3.types.ts';
+import { S3ValidationError } from '../errors/s3.errors.ts';
 
 export const validateUploadFile = (file: Express.Multer.File, userId: string, mediaType: MediaType): void => {
   const validations = [

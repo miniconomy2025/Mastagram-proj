@@ -1,13 +1,10 @@
-import { FeedQueries } from "../queries/feed.queries";
-import { RequestWithUser } from "../types/auth.types";
-import { MediaType } from "../types/s3.types";
-import { uploadToS3 } from "../utils/s3.utils";
-import { Response } from "express";
+import type { MediaType } from "../types/s3.types.ts";
+import { uploadToS3 } from "../utils/s3.utils.ts";
+import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
-import redis from "../configs/redis";
-import { getDb } from "../configs/mongodb.config";
-import { parseCursor } from "../utils/pagination";
-
+import redisClient from "../redis.ts";
+import { parseCursor } from "../utils/pagination.ts";
+import { findFeedDataByPostIds, findFeedDataByUserId, saveFeedData } from "../queries/feed.queries.ts";
 
 interface CreateFeedData {
     caption?: string;
@@ -42,14 +39,10 @@ const FEED_PAGE_LIMIT = 10;
 const MY_POSTS_CACHE_TTL = 900; // 15 minutes
 
 export class FeedController {
-    feedQueries: FeedQueries;
-    constructor() {
-        this.feedQueries = new FeedQueries();
-    }
-
-    uploadFeed = async (req: RequestWithUser, res: Response): Promise<Response> => {
-
-        const userId = req.user?._id?.toString();
+    constructor() {}
+    
+    uploadFeed = async (req: Request, res: Response): Promise<Response> => {
+        const userId = req.user?.username;
         if (!userId) {
             return res.status(401).json({
                 message: 'User not authenticated'
@@ -150,19 +143,12 @@ export class FeedController {
             }
 
             if ((feedData.media && feedData.media.length > 0) || feedData.content) {
-                await this.feedQueries.saveFeedData(feedData);
-                await redis.zAdd(`feed:user:${userId}`, [
-                    {
-                        score: feedData.createdAt.getTime(),
-                        value: feedData.feedId
-                    }
-                ]);
-                await redis.set(`post:${feedData.feedId}`, JSON.stringify(feedData), {
-                    EX: 60 * 30
-                });
+                await saveFeedData(feedData);
+                await redisClient.zadd(`feed:user:${userId}`, feedData.createdAt.getTime(), feedData.feedId);
+                await redisClient.set(`post:${feedData.feedId}`, JSON.stringify(feedData), 'EX', 60 * 30);
                 
                 // Invalidate the user's my-posts cache
-                await redis.del(`myposts:${userId}`);
+                await redisClient.del(`myposts:${userId}`);
             }
 
             const response: FeedResponse = {
@@ -186,8 +172,8 @@ export class FeedController {
         }
     }
 
-    getUserFeed = async (req: RequestWithUser, res: Response): Promise<Response> => {
-        const userId = req.user?._id?.toString();
+    getUserFeed = async (req: Request, res: Response): Promise<Response> => {
+        const userId = req.user?.username;
         if (!userId) {
             return res.status(401).json({ message: "User not authenticated" });
         }
@@ -196,18 +182,13 @@ export class FeedController {
         const feedKey = `feed:user:${userId}`;
 
         try {
-            const postIds = await redis.zrevrangebyscore(feedKey, cursor, 0, {
-                LIMIT: {
-                    offset: 0,
-                    count: FEED_PAGE_LIMIT
-                }
-            }) as string[];
+            const postIds = await redisClient.zrevrangebyscore(feedKey, cursor, 0, 'LIMIT', 0, FEED_PAGE_LIMIT) as string[];
 
             const posts: FeedData[] = [];
             const missingPostIds: string[] = [];
 
             if (postIds.length > 0) {
-                const cachedPosts = await redis.mGet(postIds.map((id: string) => `post:${id}`));
+                const cachedPosts = await redisClient.mget(postIds.map((id: string) => `post:${id}`));
                 for (let i = 0; i < postIds.length; i++) {
                     const cached = cachedPosts[i];
                     if (cached) {
@@ -225,13 +206,11 @@ export class FeedController {
 
 
             if (missingPostIds.length > 0) {
-                const dbPosts = await getDb().collection<FeedData>("feed").find({
-                    feedId: { $in: missingPostIds }
-                }).toArray();
+                const dbPosts = await findFeedDataByPostIds(missingPostIds);
 
                 for (const post of dbPosts) {
                     posts.push(post);
-                    await redis.set(`post:${post.feedId}`, JSON.stringify(post), { EX: 1800 });
+                    await redisClient.set(`post:${post.feedId}`, JSON.stringify(post), 'EX', 1800);
                 }
             }
 
@@ -251,32 +230,26 @@ export class FeedController {
     };
     
     // This method now uses caching.
-    getMyPosts = async (req: RequestWithUser, res: Response): Promise<Response> => {
-        const userId = req.user?._id?.toString();
+    getMyPosts = async (req: Request, res: Response): Promise<Response> => {
+        const userId = req.user?.username;
         if (!userId) {
             return res.status(401).json({ message: "User not authenticated" });
         }
     
         try {
             // 1. Check Redis for cached posts
-            const cachedPosts = await redis.get(`myposts:${userId}`);
+            const cachedPosts = await redisClient.get(`myposts:${userId}`);
             if (cachedPosts) {
                 console.log('✅ Redis HIT for getMyPosts', JSON.parse(cachedPosts));
                 return res.json({ posts: JSON.parse(cachedPosts) });
-            }else{
-            console.log('❌ Redis MISS for getMyPosts, querying MongoDB');
-}
+            } else {
+                console.log('❌ Redis MISS for getMyPosts, querying MongoDB');
+            }
 
-            // 2. If not in cache, fetch from MongoDB
-            const posts = await getDb().collection<FeedData>("feed")
-                .find({ userId })
-                .sort({ createdAt: -1 })
-                .limit(50)
-                .toArray();
+            const posts = await findFeedDataByUserId(userId, 50);
     
-            // 3. Store the result in Redis with a TTL
             if (posts.length > 0) {
-                await redis.set(`myposts:${userId}`, JSON.stringify(posts), { EX: MY_POSTS_CACHE_TTL });
+                await redisClient.set(`myposts:${userId}`, JSON.stringify(posts), 'EX', MY_POSTS_CACHE_TTL);
             }
     
             return res.json({ posts });

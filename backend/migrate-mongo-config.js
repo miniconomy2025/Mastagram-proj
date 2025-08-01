@@ -1,13 +1,17 @@
-const dotenv = require('dotenv');
+import dotenv from "dotenv";
+
 dotenv.config();
 
-module.exports = {
+export default {
   mongodb: {
-
-    url: process.env.MASTAGRAM_MONGODB_URI,
-    options: {}
+    url: process.env.MONGO_URL,
+    databaseName: process.env.MONGO_DB_NAME,
   },
-  migrationsDir: 'migrations',
-  changelogCollectionName: 'changelog',
-  migrationFileExtension: '.js'
+  migrationsDir: "migrations",
+  changelogCollectionName: "changelog",
+  lockCollectionName: "changelog_lock",
+  lockTtl: 0,
+  migrationFileExtension: ".js",
+  useFileHash: false,
+  moduleSystem: 'esm',
 };

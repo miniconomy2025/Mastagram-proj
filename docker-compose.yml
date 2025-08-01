@@ -1,0 +1,36 @@
+volumes:
+  redis:
+    driver: local
+  mongo_data:
+    driver: local
+  mongo_config:
+    driver: local
+
+services:
+  redis:
+    image: redis:latest
+    restart: always
+    command: redis-server
+    volumes:
+      - redis:/data
+
+  mongo:
+    image: mongo:latest
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+
+  backend:
+    build: backend
+    restart: always
+    ports:
+      - 3500:3500
+    depends_on:
+      - redis
+      - mongo
+    env_file: backend/.env
+    environment:
+      - REDIS_URL=redis:6379
+      - MONGO_URL=mongodb://mongo:27017
+      - MONGO_DB_NAME=mastagram

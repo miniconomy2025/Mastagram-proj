@@ -1,18 +1,18 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { ObjectId, Collection } from 'mongodb';
-import { getDb } from '../configs/mongodb.config';
-import { User } from '../types/auth.types';
-import { UpdateProfileRequest, UpdateProfileResponse } from '../types/profile.types';
-import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils';
-import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators';
-import redis from "../configs/redis"; 
+import type { UpdateProfileRequest, UpdateProfileResponse } from '../types/profile.types.ts';
+import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils.ts';
+import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators.ts';
+import type { User } from '../models/user.models.ts';
+import { findUserByUsername, updateUser } from '../queries/user.queries.ts';
+import redisClient from '../redis.ts';
 
 const PROFILE_CACHE_TTL = 1800; 
 
 export class ProfileController {
   // ---------------------- Helper Methods ----------------------
-  private static getAuthenticatedUserId(req: Request & { user?: User }, res: Response) {
-    if (!req.user?._id) {
+  private static getAuthenticatedUsername(req: Request, res: Response) {
+    if (!req.user?.username) {
       res.status(401).json({
         success: false,
         error: {
@@ -23,7 +23,7 @@ export class ProfileController {
       });
       return null;
     }
-    return req.user._id.toString();
+    return req.user.username;
   }
 
   private static async isUsernameTaken(usersCollection: Collection<User>, username: string, userId: string): Promise<boolean> {
@@ -53,8 +53,7 @@ export class ProfileController {
 
   private static buildUpdateObject(updateData: UpdateProfileRequest, avatarUrl: string, currentUser: User): Partial<User> {
     const updateObject: Partial<User> = {};
-    if (updateData.username !== undefined) updateObject.username = updateData.username;
-    if (updateData.displayName !== undefined) updateObject.displayName = updateData.displayName;
+    if (updateData.displayName !== undefined) updateObject.name = updateData.displayName;
     if (updateData.bio !== undefined) updateObject.bio = updateData.bio;
     if (avatarUrl && avatarUrl !== currentUser.avatarUrl) updateObject.avatarUrl = avatarUrl;
     return updateObject;
@@ -92,26 +91,25 @@ export class ProfileController {
   // Caching GET /profile endpoint
   static readonly getProfile = () => {
     return async (req: Request & { user?: User }, res: Response) => {
-      const userId = ProfileController.getAuthenticatedUserId(req, res);
-      if (!userId) return;
+      const username = ProfileController.getAuthenticatedUsername(req, res);
+      if (!username) return;
 
       try {
           // 1. Try to get data from Redis cache
-          const cachedProfile = await redis.get(`profile:${userId}`);
+          const cachedProfile = await redisClient.get(`profile:${username}`);
           if (cachedProfile) {
               return res.status(200).json(JSON.parse(cachedProfile));
           }
 
           // 2. If not in cache, fetch from MongoDB
-          const usersCollection = getDb().collection('users');
-          const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+          const user = await findUserByUsername(username);
 
           if (!user) {
               return res.status(404).json({ message: 'User not found' });
           }
 
           // 3. Cache the result for next time
-          await redis.set(`profile:${userId}`, JSON.stringify(user), { EX: PROFILE_CACHE_TTL });
+          await redisClient.set(`profile:${username}`, JSON.stringify(user), 'EX', PROFILE_CACHE_TTL);
 
           return res.status(200).json(user);
       } catch (error) {
@@ -124,34 +122,19 @@ export class ProfileController {
 
   // Invalidate cache on update
   static readonly updateProfile = () => {
-    return async (req: Request & { user?: User }, res: Response<UpdateProfileResponse>) => {
+    return async (req: Request, res: Response<UpdateProfileResponse>) => {
       try {
-        const userId = ProfileController.getAuthenticatedUserId(req, res);
-        if (!userId) return;
+        const username = ProfileController.getAuthenticatedUsername(req, res);
+        if (!username) return;
+        
         const updateData: UpdateProfileRequest = req.body;
         const file = req.file;
 
         // Validate input data
         validateProfileUpdate(updateData);
 
-        const db = getDb();
-        const usersCollection = db.collection('users');
-
-        // Check if username is already taken (if username is being updated)
-        if (updateData.username && await ProfileController.isUsernameTaken(usersCollection, updateData.username, userId)) {
-          return res.status(409).json({
-            success: false,
-            error: {
-              message: 'Username is already taken',
-              code: 'USERNAME_TAKEN',
-              statusCode: 409,
-              details: ['username']
-            }
-          });
-        }
-
         // Handle avatar upload if file is provided
-        const avatarProcess = await ProfileController.processAvatar(file, req.user!.avatarUrl, userId);
+        const avatarProcess = await ProfileController.processAvatar(file, req.user!.avatarUrl, username);
         if (!avatarProcess.success) {
           return res.status(avatarProcess.error?.statusCode || 500).json({ success: false, error: avatarProcess.error });
         }
@@ -168,7 +151,7 @@ export class ProfileController {
             data: {
               username: currentUser.username,
               email: currentUser.email,
-              displayName: currentUser.displayName,
+              displayName: currentUser.name,
               avatarUrl: currentUser.avatarUrl,
               bio: currentUser.bio
             }
@@ -176,11 +159,8 @@ export class ProfileController {
         }
 
         // Update user in database
-        const updatedUser = await usersCollection.findOneAndUpdate(
-          { _id: new ObjectId(userId) },
-          { $set: updateObject },
-          { returnDocument: 'after' }
-        );
+        const updatedUser = await updateUser(username, updateObject);
+        
         if (!updatedUser) {
           return res.status(404).json({
             success: false,
@@ -192,8 +172,8 @@ export class ProfileController {
           });
         }
     
-    //  Invalidate the profile cache after a successful update
-    await redis.del(`profile:${userId}`);
+        //  Invalidate the profile cache after a successful update
+        await redisClient.del(`profile:${username}`);
 
         // Return updated profile
         return res.status(200).json({
@@ -201,9 +181,9 @@ export class ProfileController {
           data: {
             username: updatedUser.username,
             email: updatedUser.email,
-            displayName: updatedUser.displayName,
+            displayName: updatedUser.name,
             avatarUrl: updatedUser.avatarUrl,
-            bio: updatedUser.bio
+            bio: updatedUser.bio,
           }
         });
 

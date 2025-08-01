@@ -1,10 +1,10 @@
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { s3Client, s3Settings } from '../configs/s3.config';
-import { S3UploadResult, S3OperationResponse } from '../types/s3.types';
-import { S3ValidationError, S3UploadError } from './errors/s3.errors';
-import { validateUploadFile, extractS3Key } from './validators/file.validators';
+import { s3Client, s3Settings } from '../configs/s3.config.ts';
+import { S3ValidationError, S3UploadError } from './errors/s3.errors.ts';
+import { validateUploadFile, extractS3Key } from './validators/file.validators.ts';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import type { S3OperationResponse, S3UploadResult } from '../types/s3.types.ts';
 
 const handleS3Error = (error: any, defaultMessage: string, ErrorClass: any) => {
   console.error(defaultMessage, error);

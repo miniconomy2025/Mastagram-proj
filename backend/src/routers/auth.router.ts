@@ -1,6 +1,6 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import passport, { ensureGuest } from '../configs/passport.config';
-import { AuthController } from '../controllers/auth.controller';
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import passport, { ensureGuest } from '../configs/passport.config.ts';
+import { AuthController } from '../controllers/auth.controller.ts';
 
 const authRouter = Router();
 

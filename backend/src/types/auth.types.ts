@@ -1,44 +1,31 @@
-import { ObjectId } from 'mongodb';
-import { Request } from 'express';
+import type { Request } from "express";
+import type { User } from "../models/user.models.ts";
 
-export interface User {
-  _id?: ObjectId;
-  googleId?: string;
-  username?: string;
-  email?: string;
-  displayName?: string;
-  avatarUrl?: string;
-  bio?: string;
-}
-
-export interface UserWithTokens extends User {
+export type UserWithTokens = User & {
   currentTokens?: {
-    accessToken: string;
-    refreshToken: string;
-    idToken: string;
-  };
-}
+    accessToken: string,
+    refreshToken: string,
+    idToken: string,
+  },
+};
 
-export interface RefreshTokenRequest {
+export type RefreshTokenRequest = {
   refreshToken: string;
 }
 
-export interface AuthTokenResponse {
+export type AuthTokenResponse = {
   idToken: string;
   refreshToken: string;
 }
 
-export interface AuthErrorResponse {
+export type AuthErrorResponse = {
   error: string;
   message: string;
   details?: string;
 }
 
-export interface AuthSuccessResponse {
+export type AuthSuccessResponse = {
   success: boolean;
   data: AuthTokenResponse;
   message?: string;
 }
-
-export type RequestWithUser = Request & { user?: User };
-

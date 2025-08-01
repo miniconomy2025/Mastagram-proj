@@ -1,5 +1,5 @@
-import { UserWithTokens, RefreshTokenRequest, AuthTokenResponse } from '../types/auth.types';
-import { refreshGoogleToken } from '../configs/passport.config';
+import { refreshGoogleToken } from '../configs/passport.config.ts';
+import type { AuthTokenResponse, RefreshTokenRequest, UserWithTokens } from '../types/auth.types.ts';
 
 export function extractTokenData(user: UserWithTokens): AuthTokenResponse | null {
   if (!user?.currentTokens) return null;

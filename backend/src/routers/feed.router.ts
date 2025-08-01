@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { FeedController } from "../controllers/feed.controller";
-import { ensureAuthenticated } from "../configs/passport.config";
-import { upload } from "../configs/multer.config";
-
+import { FeedController } from "../controllers/feed.controller.ts";
+import { ensureAuthenticated } from "../configs/passport.config.ts";
+import { upload } from "../configs/multer.config.ts";
 
 const router = Router();
+
 const feedController = new FeedController();
 
 router.use(ensureAuthenticated);

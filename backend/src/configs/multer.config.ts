@@ -1,9 +1,9 @@
 import multer from 'multer';
-import { s3Settings } from './s3.config';
+import { s3Settings } from './s3.config.ts';
 
 const storage = multer.memoryStorage();
 
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: unknown, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   if (s3Settings.allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {

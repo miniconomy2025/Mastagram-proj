@@ -1,7 +1,7 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { Express } from 'express';
-import { ensureAuthenticated } from './passport.config';
+import { type Express } from 'express';
+import { ensureAuthenticated } from './passport.config.ts';
 
 const options = {
   definition: {
