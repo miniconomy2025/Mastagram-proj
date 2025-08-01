@@ -50,12 +50,12 @@ type FederatedNote = {
     createdAt: string | null,
 };
 
-federationRouter.get('/notes/:noteId', async (req, res) => {
-    const noteId = req.params.noteId;
-    logger.info`fetching note ${noteId}`;
+federationRouter.get('/posts/:postId', async (req, res) => {
+    const postId = req.params.postId;
+    logger.info`fetching post ${postId}`;
 
     const ctx = createContext(federation, req);
-    const object = await cachedLookupObject(ctx, noteId);
+    const object = await cachedLookupObject(ctx, postId);
 
     logger.debug`fetched object: ${!!object}`;
 
