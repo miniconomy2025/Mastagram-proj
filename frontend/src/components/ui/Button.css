@@ -1,0 +1,121 @@
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    border-radius: 0.75rem; /* rounded-xl */
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+  .button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring-color, #3b82f6);
+  }
+  .button:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  .button svg {
+    pointer-events: none;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+  
+  /* ========== VARIANTS ========== */
+  
+  .button-default {
+    background: linear-gradient(to right, #3b82f6, #6366f1); /* bg-gradient-primary */
+    color: white;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.6); /* shadow-glow */
+  }
+  .button-default:hover {
+    opacity: 0.9;
+  }
+  
+  .button-destructive {
+    background-color: #ef4444;
+    color: white;
+  }
+  .button-destructive:hover {
+    background-color: #dc2626;
+  }
+  
+  .button-outline {
+    border: 1px solid #d1d5db;
+    background-color: #fff;
+    color: #111827;
+  }
+  .button-outline:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .button-secondary {
+    background-color: #f3f4f6;
+    color: #1f2937;
+  }
+  .button-secondary:hover {
+    background-color: #e5e7eb;
+  }
+  
+  .button-ghost {
+    background: transparent;
+    color: inherit;
+  }
+  .button-ghost:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+  }
+  
+  .button-link {
+    background: none;
+    color: #3b82f6;
+    text-underline-offset: 4px;
+  }
+  .button-link:hover {
+    text-decoration: underline;
+  }
+  
+  .button-social {
+    background: linear-gradient(to right, #3b82f6, #6366f1);
+    color: white;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+    transform: scale(1);
+  }
+  .button-social:hover {
+    transform: scale(1.05);
+  }
+  .button-social:active {
+    transform: scale(0.95);
+  }
+  
+  /* ========== SIZES ========== */
+  
+  .button-default-size {
+    height: 2.5rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .button-sm {
+    height: 2rem;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .button-lg {
+    height: 3rem;
+    border-radius: 0.75rem;
+    padding: 0.5rem 2rem;
+    font-size: 1rem;
+  }
+  
+  .button-icon {
+    height: 2.5rem;
+    width: 2.5rem;
+    padding: 0;
+  }
+  

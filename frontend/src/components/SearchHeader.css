@@ -1,0 +1,100 @@
+.search-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: hsl(var(--background) / 0.8);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  
+  .search-container {
+    max-width: 28rem; /* 448px */
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  
+  .search-wrapper {
+    position: relative;
+  }
+  
+  .search-icon {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    font-size: 1.125rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 1rem;
+    background-color: hsl(var(--input));
+    color: hsl(var(--foreground));
+    transition: all 0.3s ease;
+  }
+  
+  .search-input::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+  
+  .search-input:focus {
+    outline: none;
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary));
+  }
+  
+  .search-indicator {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+  }
+  
+  .search-pulse {
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: hsl(var(--primary));
+    border-radius: 9999px;
+    animation: pulse-glow 1.5s infinite;
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 hsl(var(--primary));
+    }
+    50% {
+      opacity: 0.5;
+      box-shadow: 0 0 0 4px hsl(var(--primary) / 0.4);
+    }
+  }
+  
+  /* Optional styles for the commented-out header */
+  .mastoinstatok-header {
+    text-align: center;
+    margin-top: 1rem;
+  }
+  
+  .mastoinstatok-title {
+    font-family: var(--font-heading);
+    font-weight: bold;
+    font-size: 2rem;
+    background: var(--gradient-primary);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  
+  .mastoinstatok-subtitle {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  

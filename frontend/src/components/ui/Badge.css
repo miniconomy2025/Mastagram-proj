@@ -1,0 +1,47 @@
+.badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    padding: 0.125rem 0.625rem; /* py-0.5 px-2.5 */
+    font-size: 0.75rem; /* text-xs */
+    font-weight: 600;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    outline: none;
+  }
+  
+  .badge:focus {
+    box-shadow: 0 0 0 2px var(--ring-color, #3b82f6); /* focus:ring-ring */
+    outline: none;
+  }
+  
+  /* Variants */
+  .badge-default {
+    background-color: #3b82f6; /* bg-primary */
+    color: white; /* text-primary-foreground */
+  }
+  .badge-default:hover {
+    background-color: #2563eb; /* bg-primary/80 */
+  }
+  
+  .badge-secondary {
+    background-color: #f3f4f6; /* bg-secondary */
+    color: #1f2937; /* text-secondary-foreground */
+  }
+  .badge-secondary:hover {
+    background-color: #e5e7eb; /* bg-secondary/80 */
+  }
+  
+  .badge-destructive {
+    background-color: #ef4444; /* bg-destructive */
+    color: white; /* text-destructive-foreground */
+  }
+  .badge-destructive:hover {
+    background-color: #dc2626; /* bg-destructive/80 */
+  }
+  
+  .badge-outline {
+    border-color: #d1d5db;
+    color: #111827; /* text-foreground */
+  }
+  

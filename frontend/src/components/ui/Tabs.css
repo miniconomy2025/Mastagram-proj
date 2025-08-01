@@ -1,0 +1,48 @@
+.tabs-list {
+    display: inline-flex;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    padding: 4px;
+    background-color: #27272a; /* Dark background */
+    color: #9ca3af; /* Muted gray text */
+  }
+  
+  .tabs-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+  }
+  
+  .tabs-trigger[data-state="active"] {
+    background-color: #18181b; /* Slightly lighter dark */
+    color: #f9fafb; /* Light text for active */
+    box-shadow: inset 0 0 0 1px #3f3f46;
+  }
+  
+  .tabs-trigger:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+  
+  .tabs-trigger:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  
+  .tabs-content {
+    margin-top: 8px;
+    outline: none;
+  }
+  
