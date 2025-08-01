@@ -1,5 +1,5 @@
 export interface UpdateProfileRequest {
-  username?: string;
+  // username?: string;
   displayName?: string;
   bio?: string;
   // avatar file will be handled by multer middleware

@@ -1,4 +1,4 @@
-import { UpdateProfileRequest } from '../../types/profile.types';
+import type { UpdateProfileRequest } from "../../types/profile.types.ts";
 
 export class ProfileValidationError extends Error {
   public readonly code: string;

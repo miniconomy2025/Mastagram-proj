@@ -1,5 +1,5 @@
-import { getDb } from "../configs/mongodb.config";
-import { FeedData } from "../controllers/feed.controller";
+import { type FeedData } from "../controllers/feed.controller.ts";
+import { getDb } from "./client.ts";
 
 export class FeedQueries {
     saveFeedData = async (feedData: FeedData): Promise<void> => {

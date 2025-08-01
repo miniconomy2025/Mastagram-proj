@@ -1,15 +1,15 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { ObjectId, Collection } from 'mongodb';
-import { getDb } from '../configs/mongodb.config';
-import { User } from '../types/auth.types';
-import { UpdateProfileRequest, UpdateProfileResponse } from '../types/profile.types';
-import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils';
-import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators';
+import type { UpdateProfileRequest, UpdateProfileResponse } from '../types/profile.types.ts';
+import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils.ts';
+import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators.ts';
+import type { User } from '../models/user.models.ts';
+import { updateUser } from '../queries/user.queries.ts';
 
 export class ProfileController {
   // ---------------------- Helper Methods ----------------------
-  private static getAuthenticatedUserId(req: Request & { user?: User }, res: Response) {
-    if (!req.user?._id) {
+  private static getAuthenticatedUsername(req: Request, res: Response) {
+    if (!req.user?.username) {
       res.status(401).json({
         success: false,
         error: {
@@ -20,7 +20,7 @@ export class ProfileController {
       });
       return null;
     }
-    return req.user._id.toString();
+    return req.user.username;
   }
 
   private static async isUsernameTaken(usersCollection: Collection<User>, username: string, userId: string): Promise<boolean> {
@@ -50,8 +50,7 @@ export class ProfileController {
 
   private static buildUpdateObject(updateData: UpdateProfileRequest, avatarUrl: string, currentUser: User): Partial<User> {
     const updateObject: Partial<User> = {};
-    if (updateData.username !== undefined) updateObject.username = updateData.username;
-    if (updateData.displayName !== undefined) updateObject.displayName = updateData.displayName;
+    if (updateData.displayName !== undefined) updateObject.name = updateData.displayName;
     if (updateData.bio !== undefined) updateObject.bio = updateData.bio;
     if (avatarUrl && avatarUrl !== currentUser.avatarUrl) updateObject.avatarUrl = avatarUrl;
     return updateObject;
@@ -88,34 +87,18 @@ export class ProfileController {
 
   // ---------------------- Route Handler ----------------------
   static readonly updateProfile = () => {
-    return async (req: Request & { user?: User }, res: Response<UpdateProfileResponse>) => {
+    return async (req: Request, res: Response<UpdateProfileResponse>) => {
       try {
-        const userId = ProfileController.getAuthenticatedUserId(req, res);
-        if (!userId) return;
+        const username = ProfileController.getAuthenticatedUsername(req, res);
+        if (!username) return;
         const updateData: UpdateProfileRequest = req.body;
         const file = req.file;
 
         // Validate input data
         validateProfileUpdate(updateData);
 
-        const db = getDb();
-        const usersCollection = db.collection('users');
-
-        // Check if username is already taken (if username is being updated)
-        if (updateData.username && await ProfileController.isUsernameTaken(usersCollection, updateData.username, userId)) {
-          return res.status(409).json({
-            success: false,
-            error: {
-              message: 'Username is already taken',
-              code: 'USERNAME_TAKEN',
-              statusCode: 409,
-              details: ['username']
-            }
-          });
-        }
-
         // Handle avatar upload if file is provided
-        const avatarProcess = await ProfileController.processAvatar(file, req.user!.avatarUrl, userId);
+        const avatarProcess = await ProfileController.processAvatar(file, req.user!.avatarUrl, username);
         if (!avatarProcess.success) {
           return res.status(avatarProcess.error?.statusCode || 500).json({ success: false, error: avatarProcess.error });
         }
@@ -132,39 +115,26 @@ export class ProfileController {
             data: {
               username: currentUser.username,
               email: currentUser.email,
-              displayName: currentUser.displayName,
+              displayName: currentUser.name,
               avatarUrl: currentUser.avatarUrl,
               bio: currentUser.bio
             }
           });
         }
 
-        // Update user in database
-        const updatedUser = await usersCollection.findOneAndUpdate(
-          { _id: new ObjectId(userId) },
-          { $set: updateObject },
-          { returnDocument: 'after' }
-        );
-        if (!updatedUser) {
-          return res.status(404).json({
-            success: false,
-            error: {
-              message: 'User not found',
-              code: 'USER_NOT_FOUND',
-              statusCode: 404
-            }
-          });
-        }
+        const user = await updateUser(username, updateObject);
+        if (!user)
+          throw new Error('user deleted during operation');
 
         // Return updated profile
         return res.status(200).json({
           success: true,
           data: {
-            username: updatedUser.username,
-            email: updatedUser.email,
-            displayName: updatedUser.displayName,
-            avatarUrl: updatedUser.avatarUrl,
-            bio: updatedUser.bio
+            username: user.username,
+            email: user.email,
+            displayName: user.name,
+            avatarUrl: user.avatarUrl,
+            bio: user.bio,
           }
         });
 

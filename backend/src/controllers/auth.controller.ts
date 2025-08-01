@@ -1,12 +1,12 @@
-import { Request, Response } from 'express';
-import { refreshGoogleToken } from '../configs/passport.config';
-import {
-  UserWithTokens,
+import type { Request, Response } from 'express';
+import { refreshGoogleToken } from '../configs/passport.config.ts';
+import type {
   RefreshTokenRequest,
   AuthTokenResponse,
   AuthErrorResponse,
-  AuthSuccessResponse
-} from '../types/auth.types';
+  AuthSuccessResponse,
+  UserWithTokens
+} from '../types/auth.types.ts';
 
 export class AuthController {
   /**

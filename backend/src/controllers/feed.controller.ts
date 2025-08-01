@@ -1,8 +1,7 @@
-import { FeedQueries } from "../queries/feed.queries";
-import { RequestWithUser } from "../types/auth.types";
-import { MediaType } from "../types/s3.types";
-import { uploadToS3 } from "../utils/s3.utils";
-import { Response } from "express";
+import { FeedQueries } from "../queries/feed.queries.ts";
+import type { MediaType } from "../types/s3.types.ts";
+import { uploadToS3 } from "../utils/s3.utils.ts";
+import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
 
 interface CreateFeedData {
@@ -40,8 +39,8 @@ export class FeedController {
         this.feedQueries = new FeedQueries();
     }
     
-    uploadFeed = async (req: RequestWithUser, res: Response): Promise<Response> => {
-        const userId = req.user?._id?.toString();
+    uploadFeed = async (req: Request, res: Response): Promise<Response> => {
+        const userId = req.user?.username?.toString();
         if (!userId) {
             return res.status(401).json({ 
                 message: 'User not authenticated' 

@@ -1,10 +1,10 @@
 import passport from 'passport';
-import { Strategy as GoogleStrategy, StrategyOptions, VerifyCallback, GoogleCallbackParameters, Profile as GoogleProfile } from 'passport-google-oauth20';
-
-import { Request, Response, NextFunction } from 'express';
-import { getDb } from './mongodb.config';
-
-import { User, UserWithTokens } from '../types/auth.types';
+import { Strategy as GoogleStrategy, type StrategyOptions, type VerifyCallback, type GoogleCallbackParameters, type Profile as GoogleProfile } from 'passport-google-oauth20';
+import { type Request, type Response, type NextFunction } from 'express';
+import type { User } from '../models/user.models.ts';
+import { createUser, findUserByGoogleId } from '../queries/user.queries.ts';
+import { Temporal } from '@js-temporal/polyfill';
+import type { UserWithTokens } from '../types/auth.types.ts';
 
 // Helper: verify Google ID token
 export async function verifyGoogleIdToken(idToken: string) {
@@ -85,9 +85,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           return done(new Error('No ID token received from Google'), false);
         }
 
-        const db = getDb();
-
-        let user: User | null = await db.collection('users').findOne({ googleId: profile.id });
+        const user = await findUserByGoogleId(profile.id);
 
         if (user) {
           // Attach tokens to user object for callback 
@@ -102,22 +100,26 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
           return done(null, userWithTokens);
         } else {
-          const newUser: Omit<User, '_id'> = {
-            googleId: profile.id,
-            displayName: profile.displayName,
-            email: profile.emails?.[0]?.value,
-            avatarUrl: profile.photos?.[0]?.value,
-          };
-
-          const result = await db.collection('users').insertOne(newUser);
-          const createdUser = await db.collection('users').findOne({ _id: result.insertedId });
-
-          if (!createdUser) {
-            return done(new Error('Failed to create user'), false);
+          if (!profile.emails?.length) {
+            throw new Error('User has no emails!');
           }
 
+          const email = profile.emails[0];
+          const generatedUsername = profile.displayName.replaceAll(/[^a-zA-Z0-9_]/g, '') + Math.floor(Math.random() * 9000 + 1000);
+          const newUser: User = {
+            username: profile.username ?? generatedUsername,
+            email: email.value,
+            googleId: profile.id,
+            name: profile.displayName,
+            bio: '',
+            keySet: [],
+            createdAt: Temporal.Now.instant().epochMilliseconds,
+          };
+
+          await createUser(newUser);
+
           const createdUserWithTokens: UserWithTokens = {
-            ...createdUser,
+            ...newUser,
             currentTokens: {
               accessToken,
               refreshToken,
@@ -134,7 +136,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // Middleware to ensure user is authenticated using Google ID token
-export const ensureAuthenticated = async (req: Request & { user?: User }, res: Response, next: NextFunction) => {
+export const ensureAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No token provided' });
@@ -142,8 +144,7 @@ export const ensureAuthenticated = async (req: Request & { user?: User }, res: R
   try {
     const payload = await verifyGoogleIdToken(token);
 
-    const db = getDb();
-    const user = await db.collection('users').findOne({ googleId: payload.sub });
+    const user = await findUserByGoogleId(payload.sub);
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
