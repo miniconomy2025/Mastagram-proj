@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft,
   Heart,
@@ -11,6 +8,7 @@ import {
   AtSign,
   Dot
 } from 'lucide-react';
+import './Notifications.css';
 
 interface Notification {
   id: string;
@@ -88,15 +86,15 @@ const Notifications = () => {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'like':
-        return <Heart className="w-5 h-5 text-heart fill-current" />;
+        return <Heart className="notification-icon like" />;
       case 'comment':
-        return <MessageCircle className="w-5 h-5 text-primary" />;
+        return <MessageCircle className="notification-icon comment" />;
       case 'follow':
-        return <UserPlus className="w-5 h-5 text-accent" />;
+        return <UserPlus className="notification-icon follow" />;
       case 'mention':
-        return <AtSign className="w-5 h-5 text-primary" />;
+        return <AtSign className="notification-icon mention" />;
       default:
-        return <Dot className="w-5 h-5 text-muted-foreground" />;
+        return <Dot className="notification-icon default" />;
     }
   };
 
@@ -130,102 +128,122 @@ const Notifications = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+    <div className="notifications-container">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-md mx-auto flex items-center justify-between p-4">
-          <Link to="/feed">
-            <ArrowLeft className="w-6 h-6 text-foreground" />
+      <div className="notifications-header">
+        <div className="notifications-header-content">
+          <Link to="/feed" className="notifications-header-back">
+            <ArrowLeft style={{ width: '1.5rem', height: '1.5rem' }} />
           </Link>
-          <h1 className="font-heading font-bold text-xl text-foreground">Notifications</h1>
-          <Button variant="ghost" size="sm" className="text-primary">
+          <h1 className="notifications-title">Notifications</h1>
+          <button className="notifications-mark-read">
             Mark all read
-          </Button>
+          </button>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto">
+      <div className="notifications-main">
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-background border-b border-border">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="unread">Unread</TabsTrigger>
-            <TabsTrigger value="like">Likes</TabsTrigger>
-            <TabsTrigger value="comment">Comments</TabsTrigger>
-          </TabsList>
+        <div className="notifications-tabs">
+          <div className="notifications-tabs-list">
+            <button 
+              className="notifications-tabs-trigger" 
+              data-state={activeTab === 'all' ? 'active' : ''}
+              onClick={() => setActiveTab('all')}
+            >
+              All
+            </button>
+            <button 
+              className="notifications-tabs-trigger" 
+              data-state={activeTab === 'unread' ? 'active' : ''}
+              onClick={() => setActiveTab('unread')}
+            >
+              Unread
+            </button>
+            <button 
+              className="notifications-tabs-trigger" 
+              data-state={activeTab === 'like' ? 'active' : ''}
+              onClick={() => setActiveTab('like')}
+            >
+              Likes
+            </button>
+            <button 
+              className="notifications-tabs-trigger" 
+              data-state={activeTab === 'comment' ? 'active' : ''}
+              onClick={() => setActiveTab('comment')}
+            >
+              Comments
+            </button>
+          </div>
 
-          <TabsContent value={activeTab} className="mt-0">
-            <div className="p-4 space-y-3">
-              {filteredNotifications.length === 0 ? (
-                <div className="text-center py-12">
-                  <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-heading font-semibold text-lg text-foreground mb-2">
-                    No notifications yet
-                  </h3>
-                  <p className="text-muted-foreground">
-                    When people interact with your posts, you'll see it here
-                  </p>
-                </div>
-              ) : (
-                filteredNotifications.map((notification) => (
-                  <Card
-                    key={notification.id}
-                    className={`p-4 border-border cursor-pointer transition-all hover:shadow-md ${
-                      !notification.read ? 'bg-primary/5 border-primary/20' : ''
-                    }`}
-                    onClick={() => markAsRead(notification.id)}
-                  >
-                    <div className="flex items-start space-x-3">
-                      {/* User Avatar */}
-                      <img
-                        src={notification.user.avatar}
-                        alt={notification.user.username}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
+          <div className="notifications-content">
+            {filteredNotifications.length === 0 ? (
+              <div className="notifications-empty">
+                <Heart className="notifications-empty-icon" />
+                <h3 className="notifications-empty-title">
+                  No notifications yet
+                </h3>
+                <p className="notifications-empty-description">
+                  When people interact with your posts, you'll see it here
+                </p>
+              </div>
+            ) : (
+              filteredNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`notification-card ${!notification.read ? 'unread' : ''}`}
+                  onClick={() => markAsRead(notification.id)}
+                >
+                  <div className="notification-content">
+                    {/* User Avatar */}
+                    <img
+                      src={notification.user.avatar}
+                      alt={notification.user.username}
+                      className="notification-avatar"
+                    />
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
-                          {getNotificationIcon(notification.type)}
-                          {!notification.read && (
-                            <div className="w-2 h-2 bg-primary rounded-full" />
-                          )}
-                        </div>
-
-                        <p className="text-foreground">
-                          <span className="font-medium">@{notification.user.username}</span>
-                          {' '}
-                          <span className="text-muted-foreground">
-                            {getNotificationText(notification)}
-                          </span>
-                        </p>
-
-                        {notification.content && (
-                          <p className="text-muted-foreground text-sm mt-1">
-                            "{notification.content}"
-                          </p>
+                    {/* Content */}
+                    <div className="notification-body">
+                      <div className="notification-header">
+                        {getNotificationIcon(notification.type)}
+                        {!notification.read && (
+                          <div className="notification-unread-dot" />
                         )}
-
-                        <p className="text-muted-foreground text-sm mt-1">
-                          {notification.timestamp}
-                        </p>
                       </div>
 
-                      {/* Post Thumbnail */}
-                      {notification.post && (
-                        <img
-                          src={notification.post.image}
-                          alt="Post"
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
+                      <p className="notification-text">
+                        <span className="notification-username">@{notification.user.username}</span>
+                        {' '}
+                        <span className="notification-action">
+                          {getNotificationText(notification)}
+                        </span>
+                      </p>
+
+                      {notification.content && (
+                        <p className="notification-comment">
+                          "{notification.content}"
+                        </p>
                       )}
+
+                      <p className="notification-timestamp">
+                        {notification.timestamp}
+                      </p>
                     </div>
-                  </Card>
-                ))
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+
+                    {/* Post Thumbnail */}
+                    {notification.post && (
+                      <img
+                        src={notification.post.image}
+                        alt="Post"
+                        className="notification-post-thumbnail"
+                      />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

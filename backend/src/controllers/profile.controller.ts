@@ -4,7 +4,10 @@ import type { UpdateProfileRequest, UpdateProfileResponse } from '../types/profi
 import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils.ts';
 import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators.ts';
 import type { User } from '../models/user.models.ts';
-import { updateUser } from '../queries/user.queries.ts';
+import { findUserByUsername, updateUser } from '../queries/user.queries.ts';
+import redisClient from '../redis.ts';
+
+const PROFILE_CACHE_TTL = 1800; 
 
 export class ProfileController {
   // ---------------------- Helper Methods ----------------------
@@ -85,12 +88,45 @@ export class ProfileController {
     };
   }
 
-  // ---------------------- Route Handler ----------------------
+  // Caching GET /profile endpoint
+  static readonly getProfile = () => {
+    return async (req: Request & { user?: User }, res: Response) => {
+      const username = ProfileController.getAuthenticatedUsername(req, res);
+      if (!username) return;
+
+      try {
+          // 1. Try to get data from Redis cache
+          const cachedProfile = await redisClient.get(`profile:${username}`);
+          if (cachedProfile) {
+              return res.status(200).json(JSON.parse(cachedProfile));
+          }
+
+          // 2. If not in cache, fetch from MongoDB
+          const user = await findUserByUsername(username);
+
+          if (!user) {
+              return res.status(404).json({ message: 'User not found' });
+          }
+
+          // 3. Cache the result for next time
+          await redisClient.set(`profile:${username}`, JSON.stringify(user), 'EX', PROFILE_CACHE_TTL);
+
+          return res.status(200).json(user);
+      } catch (error) {
+          console.error('Error fetching user profile:', error);
+          return res.status(500).json({ message: 'Failed to fetch user profile' });
+      }
+  };
+}
+
+
+  // Invalidate cache on update
   static readonly updateProfile = () => {
     return async (req: Request, res: Response<UpdateProfileResponse>) => {
       try {
         const username = ProfileController.getAuthenticatedUsername(req, res);
         if (!username) return;
+        
         const updateData: UpdateProfileRequest = req.body;
         const file = req.file;
 
@@ -122,19 +158,32 @@ export class ProfileController {
           });
         }
 
-        const user = await updateUser(username, updateObject);
-        if (!user)
-          throw new Error('user deleted during operation');
+        // Update user in database
+        const updatedUser = await updateUser(username, updateObject);
+        
+        if (!updatedUser) {
+          return res.status(404).json({
+            success: false,
+            error: {
+              message: 'User not found',
+              code: 'USER_NOT_FOUND',
+              statusCode: 404
+            }
+          });
+        }
+    
+        //  Invalidate the profile cache after a successful update
+        await redisClient.del(`profile:${username}`);
 
         // Return updated profile
         return res.status(200).json({
           success: true,
           data: {
-            username: user.username,
-            email: user.email,
-            displayName: user.name,
-            avatarUrl: user.avatarUrl,
-            bio: user.bio,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            displayName: updatedUser.name,
+            avatarUrl: updatedUser.avatarUrl,
+            bio: updatedUser.bio,
           }
         });
 

@@ -6,7 +6,6 @@ import apiRouter from './routers/index.ts';
 import { setupSwaggerDocs } from './configs/swagger.ts';
 import config from './config.ts';
 import { integrateFederation } from '@fedify/express';
-import federationRouter from './routers/federation.router.ts';
 import federation from './federation/federation.ts';
 
 const app = express();
@@ -15,7 +14,7 @@ const httpServer = http.createServer(app);
 setupSwaggerDocs(app);
 
 const allowedOrigins = [
-  'http://localhost:8081', 
+  'http://localhost:8080', 
 ];
 
 app.use(cors({

@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { X, Image, Video, Hash, Smile, MapPin, ChevronLeft, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { api } from '@/lib/api';
 
 interface MediaItem {
   url: string;
@@ -19,34 +20,41 @@ const CreatePost = () => {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [currentStep, setCurrentStep] = useState<'media' | 'details'>('media');
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0); // Added state for tracking current preview index
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
     const newMedia: MediaItem[] = [];
-    
+
     Array.from(files).forEach(file => {
       const url = URL.createObjectURL(file);
       const type = file.type.startsWith('video') ? 'video' : 'image';
-      
-      newMedia.push({
-        url,
-        type,
-        file
-      });
+
+      newMedia.push({ url, type, file });
     });
 
     setMedia(prev => [...prev, ...newMedia]);
-    setCurrentStep('details');
+
+    if (media.length === 0 && newMedia.length > 0) {
+      setCurrentStep('details');
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const removeMedia = (index: number) => {
-    const newMedia = [...media];
-    newMedia.splice(index, 1);
+    const newMedia = media.filter((_, i) => i !== index);
     setMedia(newMedia);
+
     if (newMedia.length === 0) {
       setCurrentStep('media');
+      setCurrentMediaIndex(0);
+    } else if (currentMediaIndex >= newMedia.length) {
+      setCurrentMediaIndex(newMedia.length - 1);
     }
   };
 
@@ -62,24 +70,32 @@ const CreatePost = () => {
     setHashtags(prev => prev.filter(t => t !== tag));
   };
 
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleSubmit = async () => {
     if (media.length === 0) return;
-    
+
     setIsUploading(true);
-    
+
+    const formData = new FormData();
+    formData.append('feedType', 'media');
+    if (caption) formData.append('caption', caption);
+    if (hashtags.length > 0) formData.append('hashtags', hashtags.join(','));
+    media.forEach(item => {
+      formData.append('media', item.file);
+    });
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      navigate('/'); // Redirect to home after successful post
+      await api.post('/feed', formData);
+      navigate('/');
     } catch (error) {
       console.error('Error creating post:', error);
+      alert('Something went wrong while uploading the post.');
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
   };
 
   return (
@@ -88,29 +104,29 @@ const CreatePost = () => {
       <div className="sticky top-0 z-50 bg-background border-b border-border">
         <div className="max-w-md mx-auto p-4 flex items-center justify-between">
           {currentStep === 'details' ? (
-            <button 
+            <button
               onClick={() => setCurrentStep('media')}
               className="text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
           ) : (
-            <button 
+            <button
               onClick={() => navigate(-1)}
               className="text-muted-foreground hover:text-foreground"
             >
               <X className="w-6 h-6" />
             </button>
           )}
-          
+
           <h1 className="font-semibold text-foreground">
             {currentStep === 'media' ? 'New Post' : 'Edit Post'}
           </h1>
-          
+
           {currentStep === 'details' && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleSubmit}
               disabled={isUploading}
               className="text-primary font-semibold hover:bg-transparent"
@@ -134,31 +150,23 @@ const CreatePost = () => {
                 className="rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={triggerFileInput}
               >
-                Select from computer
+                Select from Device
               </Button>
             </div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept="image/*,video/*"
-              multiple
-            />
           </div>
         ) : (
           <div className="flex flex-col">
             {/* Media Preview */}
             <div className="relative aspect-square bg-black">
-              {media[0]?.type === 'image' ? (
+              {media[currentMediaIndex]?.type === 'image' ? (
                 <img
-                  src={media[0].url}
-                  alt="Post preview"
+                  src={media[currentMediaIndex].url}
+                  alt={`Post preview ${currentMediaIndex}`}
                   className="w-full h-full object-contain"
                 />
               ) : (
                 <video
-                  src={media[0].url}
+                  src={media[currentMediaIndex].url}
                   className="w-full h-full object-contain"
                   controls
                 />
@@ -179,7 +187,11 @@ const CreatePost = () => {
 
               <div className="flex items-center space-x-2 overflow-x-auto py-2">
                 {media.map((item, index) => (
-                  <div key={index} className="relative flex-shrink-0 w-16 h-16">
+                  <div
+                    key={index}
+                    onClick={() => setCurrentMediaIndex(index)}
+                    className="relative flex-shrink-0 w-16 h-16 cursor-pointer"
+                  >
                     {item.type === 'image' ? (
                       <img
                         src={item.url}
@@ -193,7 +205,10 @@ const CreatePost = () => {
                       />
                     )}
                     <button
-                      onClick={() => removeMedia(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeMedia(index);
+                      }}
                       className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
                     >
                       <X className="w-3 h-3" />
@@ -203,6 +218,7 @@ const CreatePost = () => {
                 <button
                   onClick={triggerFileInput}
                   className="flex-shrink-0 w-16 h-16 border border-dashed border-muted rounded flex items-center justify-center"
+                  title="Add more media"
                 >
                   <Plus className="w-5 h-5 text-muted-foreground" />
                 </button>
@@ -255,7 +271,7 @@ const CreatePost = () => {
                     <span className="text-sm">Add emoji</span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <MapPin className="w-5 h-5 text-muted-foreground" />
@@ -266,6 +282,16 @@ const CreatePost = () => {
             </div>
           </div>
         )}
+
+        {/* Hidden File Input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept="image/*,video/*"
+          multiple
+        />
       </main>
     </div>
   );
