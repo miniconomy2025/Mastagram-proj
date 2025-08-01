@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApiQuery, api } from '@/lib/api';
+import { useApiQuery, api, auth } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
  
  
@@ -96,11 +96,16 @@ const Profile = () => {
         setApiUser(profileData);
       } catch (err) {
         setError(err as Error);
+        // Handle 401 errors specifically
+        if ((err as any).status === 401) {
+          auth.logout(); // Use auth.logout() which clears tokens and redirects
+          return;
+        }
       } finally {
         setIsLoading(false);
       }
     };
- 
+
     fetchProfile();
   }, []);
  
