@@ -112,10 +112,10 @@ const Profile = () => {
   // Compose userData from API and mock meta
   const userData = {
     id: '1',
-    username: apiUser?.username || 'king👑',
-    display_name: apiUser?.displayName || 'Alfred Malope',
-    bio: apiUser?.bio || '👨‍💻 Software Engineer | 🚀 Building scalable systems | ☕ Coffee enthusiast | 📷 Capturing moments',
-    avatar_url: apiUser?.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+    username: apiUser?.username || ' ',
+    display_name: apiUser?.displayName || ' ',
+    bio: apiUser?.bio || ' ',
+    avatar_url: apiUser?.avatarUrl || ' ',
     ...MOCK_USER_META
   };
  
@@ -386,9 +386,6 @@ const Profile = () => {
                   alignItems: 'center'
                 }}>
                   {userData.display_name}
-                  {userData.verified && (
-                    <span style={{ marginLeft: '0.5rem', color: 'hsl(var(--primary))' }} title="Verified">✓</span>
-                  )}
                 </h2>
                 <p style={{ color: 'hsl(var(--muted-foreground))' }}>{userData.bio}</p>
               </div>

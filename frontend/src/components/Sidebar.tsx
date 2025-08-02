@@ -8,7 +8,9 @@ import {
   Settings,
   TrendingUp,
   Bookmark,
+  LogIn,
 } from 'lucide-react';
+import { auth } from '../lib/api';
 import './Sidebar.css';
 
 const navigation = [
@@ -65,13 +67,25 @@ export const Sidebar = () => {
 
       {/* User Profile */}
       <div className="user-profile-container">
-        <div className="user-profile-content">
-          <div className="user-avatar">A</div>
-          <div className="user-info">
-            <p className="user-name">Alfred Malope</p>
-            <p className="user-username">@king</p>
+        {auth.isAuthenticated() ? (
+          <div className="user-profile-content">
+            <div className="user-avatar">
+              {auth.getUser()?.name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <div className="user-info">
+              <p className="user-name">{auth.getUser()?.name || 'Unknown User'}</p>
+              <p className="user-username">@{auth.getUser()?.email?.split('@')[0] || 'user'}</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <NavLink to="/login" className="login-prompt">
+            <LogIn className="login-icon" />
+            <div className="login-info">
+              <p className="login-text">Sign in to Mastagram</p>
+              <p className="login-subtext">Connect and share</p>
+            </div>
+          </NavLink>
+        )}
       </div>
     </div>
   );
