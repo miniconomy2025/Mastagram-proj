@@ -160,3 +160,55 @@
   text-overflow: ellipsis; /* truncate */
   white-space: nowrap;
 }
+
+/* Login Prompt Styles */
+.login-prompt {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: hsl(var(--muted));
+  border-radius: 0.75rem;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  border: 2px solid transparent;
+}
+
+.login-prompt:hover {
+  background-color: hsl(var(--accent));
+  border-color: hsl(var(--primary));
+  transform: translateY(-1px);
+}
+
+.login-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(to top right, #ec4899, #f59e0b);
+  color: white;
+  flex-shrink: 0;
+}
+
+.login-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.login-text {
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.login-subtext {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

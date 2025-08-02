@@ -31,7 +31,7 @@ const App = () => (
           <Sidebar />
           <main className="flex-1 lg:ml-64">
             <Routes>
-              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/" element={<Index />} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/profile/edit" element={<ProtectedRoute><ProfileEdit /></ProtectedRoute>} />
