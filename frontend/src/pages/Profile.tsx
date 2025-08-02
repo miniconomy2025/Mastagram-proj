@@ -1,23 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useApiQuery, api, auth } from '@/lib/api';
-import { Skeleton } from '@/components/ui/skeleton';
- 
- 
-type ApiUser = {
-  username?: string;
-  email?: string;
-  displayName?: string;
-  avatarUrl?: string;
-  bio?: string;
-};
- 
-import { Link } from 'react-router-dom';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui/tabs';
 import {
   ArrowLeft,
   Settings,
@@ -25,50 +7,127 @@ import {
   Bookmark,
   Heart,
   Camera,
-  ChevronLeft
+  ChevronLeft,
+  Loader2
 } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
 import { SocialPost } from '@/components/SocialPost';
- 
-// These fields remain as mock data per instructions
+import './Profile.css';
+
 const MOCK_USER_META = {
-  follower_count: 12500,
-  following_count: 234,
   posts_count: 89,
   verified: true
 };
- 
- 
-const followersList = [
-  { id: '2', username: 'janedoe', display_name: 'Jane Doe', avatar_url: 'https://randomuser.me/api/portraits/women/1.jpg' },
-  { id: '3', username: 'alexsmith', display_name: 'Alex Smith', avatar_url: 'https://randomuser.me/api/portraits/men/2.jpg' },
-];
- 
-const followingList = [
-  { id: '4', username: 'michael', display_name: 'Michael Johnson', avatar_url: 'https://randomuser.me/api/portraits/men/3.jpg' },
-  { id: '5', username: 'emily', display_name: 'Emily Davis', avatar_url: 'https://randomuser.me/api/portraits/women/4.jpg' },
-];
- 
- 
+
+type ApiUser = {
+  username?: string;
+  email?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  bio?: string;
+};
+
+interface UserProfileResponse {
+  id: string;
+  handle: string;
+  name: string;
+  bio: string;
+  createdAt: string;
+  followers: number;
+  following: number;
+}
+
+interface UserListItem {
+  id: string;
+  handle: string;
+  name: string;
+}
+
+interface UserListResponse {
+  items: UserListItem[];
+  total: number;
+}
+
+const useUserProfile = (username: string | undefined) => {
+  return useApiQuery<UserProfileResponse>(
+    ['userProfile', username],
+    username ? `/federation/users/@test@mastodon.social` : '',
+    {
+      enabled: !!username,
+    }
+  );
+};
+
+const useUserFollowers = (username: string | undefined) => {
+  return useApiQuery<UserListResponse>(
+    ['userFollowers', username],
+    username ? `/federation/users/@test@mastodon.social/followers` : '',
+    {
+      enabled: !!username,
+    }
+  );
+};
+
+const useUserFollowing = (username: string | undefined) => {
+  return useApiQuery<UserListResponse>(
+    ['userFollowing', username],
+    username ? `/federation/users/@test@mastodon.social/following` : '',
+    {
+      enabled: !!username,
+    }
+  );
+};
+
 type TabValue = 'posts' | 'liked' | 'saved';
 type ListTab = 'followers' | 'following';
- 
+
 const Profile = () => {
+  const { username: routeUsername } = useParams<{ username?: string }>();
   const [activeTab, setActiveTab] = useState<TabValue>('posts');
   const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
   const [showConnections, setShowConnections] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { data, isLoading: isPostsLoading, error: postsError } = useApiQuery<{ posts: any[] }>(
+
+  // This fetch is for the logged-in user's posts, not a public profile.
+  const { data: postsData, isLoading: isPostsLoading, error: postsError } = useApiQuery<{ posts: any[] }>(
     ['user-posts'],
     '/feed/mine'
   );
- 
-  // Profile state
+
+  // This fetch is for the currently logged-in user's profile data
+  // The username is derived from the auth token
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
- 
- 
-  const userPosts = (data?.posts ?? []).map(post => ({
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const profileData = await api.get<ApiUser>('/profile');
+        setApiUser(profileData);
+      } catch (err) {
+        setError(err as Error);
+        if ((err as any).status === 401) {
+          auth.logout();
+          return;
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const profileUsername = routeUsername || apiUser?.email?.split('@')[0];
+  const federatedHandle = profileUsername ? `${profileUsername}@mastodon.social` : undefined;
+
+  const federatedProfileQuery = useUserProfile(federatedHandle);
+  const followersQuery = useUserFollowers(federatedHandle);
+  const followingQuery = useUserFollowing(federatedHandle);
+
+  const userPosts = (postsData?.posts ?? []).map(post => ({
     id: post._id,
     user_id: post.userId,
     username: apiUser?.username || 'unknown',
@@ -83,103 +142,69 @@ const Profile = () => {
     comments_count: post.comments_count ?? 0,
     created_at: post.createdAt,
   }));
- 
- 
- 
-  // Fetch user profile on component mount
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const profileData = await api.get<ApiUser>('/profile');
-        setApiUser(profileData);
-      } catch (err) {
-        setError(err as Error);
-        // Handle 401 errors specifically
-        if ((err as any).status === 401) {
-          auth.logout(); // Use auth.logout() which clears tokens and redirects
-          return;
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchProfile();
-  }, []);
- 
-  // Compose userData from API and mock meta
   const userData = {
     id: '1',
     username: apiUser?.username || ' ',
     display_name: apiUser?.displayName || ' ',
     bio: apiUser?.bio || ' ',
     avatar_url: apiUser?.avatarUrl || ' ',
-    ...MOCK_USER_META
+    following: federatedProfileQuery.data?.following ?? 0,
+    followers: federatedProfileQuery.data?.followers ?? 0,
+    posts_count: postsData?.posts.length ?? 0,
+    verified: true
   };
- 
-  const displayedList =
-    connectionsTab === 'followers' ? followersList : followingList;
- 
+
+  const mappedFollowers = (followersQuery.data?.items ?? []).map(user => ({
+    id: user.id,
+    username: user.handle,
+    display_name: user.name,
+    avatar_url: `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
+  }));
+
+  const mappedFollowing = (followingQuery.data?.items ?? []).map(user => ({
+    id: user.id,
+    username: user.handle,
+    display_name: user.name,
+    avatar_url: `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
+  }));
+
+  const displayedList = connectionsTab === 'followers' ? mappedFollowers : mappedFollowing;
   const filteredList = displayedList.filter((user) =>
     user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
- 
-  if (isLoading || isPostsLoading) {
+
+  const isProfileDataLoading = isLoading || federatedProfileQuery.isLoading;
+  const isConnectionsLoading = followersQuery.isLoading || followingQuery.isLoading;
+
+  if (isProfileDataLoading || isPostsLoading) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '28rem', margin: '0 auto' }}>
-        {/* Skeleton for avatar */}
-        <Skeleton className="w-20 h-20 rounded-full mb-4" />
- 
-        {/* Skeleton for name */}
-        <Skeleton className="h-6 w-48 mb-2" />
- 
-        {/* Skeleton for bio */}
-        <Skeleton className="h-4 w-full mb-6" />
- 
-        {/* Skeleton list for posts */}
-        <div className="space-y-6">
+      <div className="skeleton-container">
+        <div className="skeleton-avatar"></div>
+        <div className="skeleton-name"></div>
+        <div className="skeleton-bio"></div>
+        <div className="skeleton-posts">
           {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-48 rounded-md" />
+            <div key={i} className="skeleton-post-item"></div>
           ))}
         </div>
       </div>
     );
   }
- 
-  if (error) {
-    return <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>Failed to load profile.</div>;
+
+  if (error || federatedProfileQuery.isError) {
+    return <div className="empty-state">Failed to load profile.</div>;
   }
- 
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'hsl(var(--background))' }}>
+    <div className="profile-container">
       {/* Header */}
-      <header style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        backgroundColor: 'rgba(hsl(var(--background)), 0.8)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid hsl(var(--border))'
-      }}>
-        <div style={{
-          maxWidth: '28rem',
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '1rem'
-        }}>
+      <header className="header">
+        <div className="header-content">
           {showConnections ? (
             <button
               onClick={() => setShowConnections(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                color: 'hsl(var(--foreground))'
-              }}
+              className="back-button"
             >
               <ChevronLeft style={{ width: '1.5rem', height: '1.5rem' }} />
               <span>Back</span>
@@ -189,263 +214,179 @@ const Profile = () => {
               <ArrowLeft style={{ width: '1.5rem', height: '1.5rem', color: 'hsl(var(--foreground))' }} />
             </Link>
           )}
-          <h1 style={{
-            fontFamily: 'var(--font-heading)',
-            fontWeight: 'bold',
-            fontSize: '1.25rem',
-            color: 'hsl(var(--foreground))'
-          }}>
-            @{userData.username}
+          <h1 className="header-title">
+            {userData.username}
           </h1>
           <Link to="/settings">
             <Settings style={{ width: '1.5rem', height: '1.5rem', color: 'hsl(var(--foreground))' }} />
           </Link>
         </div>
       </header>
- 
-      <main style={{ maxWidth: '28rem', margin: '0 auto' }}>
+
+      <main className="main-content">
         {showConnections ? (
           <>
-            <Tabs value={connectionsTab} onValueChange={(v) => setConnectionsTab(v as ListTab)} style={{ padding: '1rem 1rem 0' }}>
-              <TabsList style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                width: '100%',
-                marginBottom: '1rem'
-              }}>
-                <TabsTrigger value="followers">Followers</TabsTrigger>
-                <TabsTrigger value="following">Following</TabsTrigger>
-              </TabsList>
- 
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '1rem'
-              }}>
+            <div className="connections-tabs">
+              <div className="connections-tabs-list">
+                <button
+                  className={`connections-tabs-trigger ${connectionsTab === 'followers' ? 'active' : ''}`}
+                  onClick={() => setConnectionsTab('followers')}
+                >
+                  Followers
+                </button>
+                <button
+                  className={`connections-tabs-trigger ${connectionsTab === 'following' ? 'active' : ''}`}
+                  onClick={() => setConnectionsTab('following')}
+                >
+                  Following
+                </button>
+              </div>
+
+              <div className="search-input-wrapper">
                 <input
                   type="text"
                   placeholder="Search users"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '0.375rem',
-                    padding: '0.5rem 0.75rem',
-                    fontSize: '0.875rem',
-                    color: 'hsl(var(--foreground))',
-                    backgroundColor: 'hsl(var(--background))'
-                  }}
+                  className="search-input"
                 />
               </div>
- 
-              <TabsContent value="followers">
-                <ul style={{ display: 'grid', gap: '1rem' }}>
-                  {filteredList.length > 0 ? (
-                    filteredList.map((user) => (
-                      <li key={user.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem'
-                      }}>
-                        <img
-                          src={user.avatar_url}
-                          alt={user.display_name}
-                          style={{
-                            width: '3rem',
-                            height: '3rem',
-                            borderRadius: '9999px',
-                            border: '1px solid hsl(var(--border))'
-                          }}
-                        />
-                        <div>
-                          <p style={{ fontWeight: '600' }}>{user.display_name}</p>
-                          <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.875rem' }}>@{user.username}</p>
-                        </div>
-                      </li>
-                    ))
-                  ) : (
-                    <p style={{
-                      color: 'hsl(var(--muted-foreground))',
-                      textAlign: 'center'
-                    }}>
-                      No users found.
-                    </p>
-                  )}
-                </ul>
-              </TabsContent>
- 
-              <TabsContent value="following">
-                <ul style={{ display: 'grid', gap: '1rem' }}>
-                  {filteredList.length > 0 ? (
-                    filteredList.map((user) => (
-                      <li key={user.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem'
-                      }}>
-                        <img
-                          src={user.avatar_url}
-                          alt={user.display_name}
-                          style={{
-                            width: '3rem',
-                            height: '3rem',
-                            borderRadius: '9999px',
-                            border: '1px solid hsl(var(--border))'
-                          }}
-                        />
-                        <div>
-                          <p style={{ fontWeight: '600' }}>{user.display_name}</p>
-                          <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.875rem' }}>@{user.username}</p>
-                        </div>
-                      </li>
-                    ))
-                  ) : (
-                    <p style={{
-                      color: 'hsl(var(--muted-foreground))',
-                      textAlign: 'center'
-                    }}>
-                      No users found.
-                    </p>
-                  )}
-                </ul>
-              </TabsContent>
-            </Tabs>
+
+              <div>
+                {isConnectionsLoading ? (
+                  <div className="loader-wrapper">
+                    <Loader2 className="loader" />
+                  </div>
+                ) : (
+                  <ul className="user-list">
+                    {filteredList.length > 0 ? (
+                      filteredList.map((user) => (
+                        <li key={user.id} className="user-list-item">
+                          <img
+                            src={user.avatar_url}
+                            alt={user.display_name}
+                            className="user-list-avatar"
+                          />
+                          <div className="user-list-info">
+                            <p className="user-list-name">{user.display_name}</p>
+                            <p className="user-list-handle">{user.username}</p>
+                          </div>
+                        </li>
+                      ))
+                    ) : (
+                      <p className="empty-state">
+                        No users found.
+                      </p>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </div>
           </>
         ) : (
           <>
-            <section style={{ padding: '1.5rem', display: 'grid', gap: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
-                <div style={{ position: 'relative' }}>
+            <section className="profile-section">
+              <div className="profile-header">
+                <div className="avatar-wrapper">
                   <img
                     src={userData.avatar_url}
                     alt="avatar"
-                    style={{
-                      width: '5rem',
-                      height: '5rem',
-                      borderRadius: '9999px',
-                      border: '2px solid hsl(var(--primary))'
-                    }}
+                    className="avatar-image"
                   />
                   <button
                     aria-label="Change avatar"
-                    style={{
-                      position: 'absolute',
-                      bottom: '-0.25rem',
-                      right: '-0.25rem',
-                      width: '2rem',
-                      height: '2rem',
-                      backgroundColor: 'hsl(var(--primary))',
-                      borderRadius: '9999px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
+                    className="change-avatar-button"
                   >
                     <Camera style={{ width: '1rem', height: '1rem', color: 'white' }} />
                   </button>
                 </div>
-                <div style={{ flex: 1, display: 'grid', gap: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>{userData.posts_count}</div>
-                      <div style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.875rem' }}>Posts</div>
+                <div className="profile-stats">
+                  <div className="stats-list">
+                    <div className="stat-item">
+                      <div className="stat-value">{userData.posts_count}</div>
+                      <div className="stat-label">Posts</div>
                     </div>
                     <button
                       onClick={() => {
                         setConnectionsTab('followers');
                         setShowConnections(true);
                       }}
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+                      className="stat-item"
                     >
-                      <div style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>
-                        {userData.follower_count.toLocaleString()}
+                      <div className="stat-value">
+                        {userData.followers}
                       </div>
-                      <div style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.875rem' }}>Followers</div>
+                      <div className="stat-label">Followers</div>
                     </button>
                     <button
                       onClick={() => {
                         setConnectionsTab('following');
                         setShowConnections(true);
                       }}
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+                      className="stat-item"
                     >
-                      <div style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>{userData.following_count}</div>
-                      <div style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.875rem' }}>Following</div>
+                      <div className="stat-value">{userData.following}</div>
+                      <div className="stat-label">Following</div>
                     </button>
                   </div>
                 </div>
               </div>
- 
-              <div>
-                <h2 style={{
-                  fontWeight: 'bold',
-                  fontSize: '1.125rem',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  {userData.display_name}
-                </h2>
-                <p style={{ color: 'hsl(var(--muted-foreground))' }}>{userData.bio}</p>
+
+              <div className="profile-info">
+                <h2>{userData.display_name}</h2>
+                <p>{userData.bio}</p>
               </div>
             </section>
- 
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} style={{ width: '100%' }}>
-              <TabsList style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                borderTop: '1px solid hsl(var(--border))',
-                margin: "0 3%"
-              }}>
-                <TabsTrigger value="posts">
+
+            <div className="tabs-container">
+              <div className="tabs-list">
+                <button
+                  className={`tab-trigger ${activeTab === 'posts' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('posts')}
+                >
                   <Grid3X3 style={{ width: '1rem', height: '1rem' }} /> Posts
-                </TabsTrigger>
-                <TabsTrigger value="liked">
+                </button>
+                <button
+                  className={`tab-trigger ${activeTab === 'liked' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('liked')}
+                >
                   <Heart style={{ width: '1rem', height: '1rem' }} /> Liked
-                </TabsTrigger>
-                <TabsTrigger value="saved">
+                </button>
+                <button
+                  className={`tab-trigger ${activeTab === 'saved' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('saved')}
+                >
                   <Bookmark style={{ width: '1rem', height: '1rem' }} /> Saved
-                </TabsTrigger>
-              </TabsList>
- 
-              <TabsContent value="posts">
-                <div style={{ padding: '1rem', display: 'grid', gap: '1.5rem' }}>
+                </button>
+              </div>
+
+              {activeTab === 'posts' && (
+                <div className="tabs-content">
                   {userPosts.map(post => (
                     <SocialPost key={post.id} post={post} />
                   ))}
                 </div>
-              </TabsContent>
-              <TabsContent value="liked">
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <Heart style={{
-                    width: '3rem',
-                    height: '3rem',
-                    color: 'hsl(var(--muted-foreground))',
-                    margin: '0 auto 1rem'
-                  }} />
-                  <h3 style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>No liked posts yet</h3>
-                  <p style={{ color: 'hsl(var(--muted-foreground))' }}>Posts you like will appear here</p>
+              )}
+              {activeTab === 'liked' && (
+                <div className="empty-state">
+                  <Heart className="empty-icon" />
+                  <h3>No liked posts yet</h3>
+                  <p>Posts you like will appear here</p>
                 </div>
-              </TabsContent>
-              <TabsContent value="saved">
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <Bookmark style={{
-                    width: '3rem',
-                    height: '3rem',
-                    color: 'hsl(var(--muted-foreground))',
-                    margin: '0 auto 1rem'
-                  }} />
-                  <h3 style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>No saved posts yet</h3>
-                  <p style={{ color: 'hsl(var(--muted-foreground))' }}>Save posts to view them later</p>
+              )}
+              {activeTab === 'saved' && (
+                <div className="empty-state">
+                  <Bookmark className="empty-icon" />
+                  <h3>No saved posts yet</h3>
+                  <p>Save posts to view them later</p>
                 </div>
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
           </>
         )}
       </main>
     </div>
   );
 };
- 
+
 export default Profile;
