@@ -12,7 +12,7 @@ export async function findFollowingByUsername(username: string, limit: number, c
     const following = collection();
     
     let userFollowing = await following.find({
-        followingUsername: username,
+        followerUsername: username,
         createdAt: {
             "$lt": cursor,
         },
@@ -36,10 +36,10 @@ export async function createFollowing(following: Following) {
     }
 }
 
-export async function deleteFollowing(followingId: string, followingUsername: string) {
+export async function deleteFollowing(followingId: string, followerUsername: string) {
     const following = collection();
     await following.deleteOne({
-        "actor.id": followingId,
-        followingUsername,
+        actorId: followingId,
+        followerUsername,
     });
 }
