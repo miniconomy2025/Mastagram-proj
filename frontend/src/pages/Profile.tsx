@@ -13,7 +13,9 @@ import {
 import { Link, useParams } from 'react-router-dom';
 import { SocialPost } from '@/components/SocialPost';
 import './Profile.css';
-
+import { FederatedPost } from '@/types/federation';
+ 
+ 
 type ApiUser = {
   username?: string;
   email?: string;
@@ -21,7 +23,7 @@ type ApiUser = {
   avatarUrl?: string;
   bio?: string;
 };
-
+ 
 interface UserProfileResponse {
   id: string;
   handle: string;
@@ -30,20 +32,21 @@ interface UserProfileResponse {
   createdAt: string;
   followers: number;
   following: number;
+  avatarUrl: string;
 }
-
+ 
 interface UserListItem {
   id: string;
   handle: string;
   name: string;
 }
-
+ 
 interface UserListResponse {
   items: UserListItem[];
   total: number;
   next?: string;
 }
-
+ 
 const useUserProfile = (handle: string | undefined) => {
   return useApiQuery<UserProfileResponse>(
     ['userProfile', handle],
@@ -51,7 +54,7 @@ const useUserProfile = (handle: string | undefined) => {
     { enabled: !!handle }
   );
 };
-
+ 
 const usePaginatedConnections = (
   handle: string | undefined,
   type: 'followers' | 'following'
@@ -60,14 +63,14 @@ const usePaginatedConnections = (
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-
+ 
   const fetchList = useCallback(async (url?: string) => {
     if (!handle || loading) return;
-    
+   
     try {
       setLoading(true);
       let endpoint: string;
-      
+     
       if (url) {
         // Pagination: pass the full URL as a query parameter
         endpoint = `/federation/users/${handle}/${type}?page=${encodeURIComponent(url)}`;
@@ -75,9 +78,9 @@ const usePaginatedConnections = (
         // Initial load: use base endpoint
         endpoint = `/federation/users/${handle}/${type}`;
       }
-      
+     
       const res = await api.get<UserListResponse>(endpoint);
-      
+     
       if (!url) {
         // Initial load
         setList(res.items);
@@ -85,7 +88,7 @@ const usePaginatedConnections = (
         // Pagination load
         setList(prev => [...prev, ...res.items]);
       }
-      
+     
       setNextUrl(res.next ?? null);
       setHasMore(!!res.next);
     } catch (error) {
@@ -94,20 +97,20 @@ const usePaginatedConnections = (
       setLoading(false);
     }
   }, [handle, type, loading]);
-
+ 
   const loadMore = useCallback(() => {
     if (nextUrl && !loading && hasMore) {
       fetchList(nextUrl);
     }
   }, [nextUrl, loading, hasMore, fetchList]);
-
+ 
   useEffect(() => {
     setList([]);
     setNextUrl(null);
     setHasMore(true);
     fetchList();
-  }, [handle, type]);
-
+  }, [handle]);
+ 
   return {
     list,
     loading,
@@ -115,30 +118,31 @@ const usePaginatedConnections = (
     loadMore,
   };
 };
-
+ 
 type TabValue = 'posts' | 'liked' | 'saved';
 type ListTab = 'followers' | 'following';
-
+ 
 const Profile = () => {
   const { username: routeUsername } = useParams<{ username?: string }>();
   const [activeTab, setActiveTab] = useState<TabValue>('posts');
   const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
   const [showConnections, setShowConnections] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
+ 
   const connectionsContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver>();
-
+ 
+  // Use a different query key for the current user's posts
   const { data: postsData, isLoading: isPostsLoading } = useApiQuery<{ posts: any[] }>(
-    ['user-posts'],
+    ['user-posts', 'mine'],
     '/feed/mine'
   );
-
+ 
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
+ 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -157,102 +161,119 @@ const Profile = () => {
     };
     fetchProfile();
   }, []);
-
-  const profileUsername = routeUsername || apiUser?.email?.split('@')[0];
-  const federatedHandle = profileUsername ? `@Mastodon@mastodon.social` : undefined;
-
+ 
+  // --- Start of Changes ---
+  // Determine which user's profile to show based on the URL
+  const isViewingOwnProfile = !routeUsername;
+  const currentUsername = isViewingOwnProfile
+    ? apiUser?.email?.split('@')[0]
+    : routeUsername;
+ 
+  // Construct the federated handle dynamically
+  const federatedHandle = currentUsername ? `@third3king@mastodon.social` : undefined;
+ 
   const federatedProfileQuery = useUserProfile(federatedHandle);
-
+ 
   const {
     list: followers,
     loading: isFollowersLoading,
     hasMore: hasMoreFollowers,
     loadMore: loadMoreFollowers
   } = usePaginatedConnections(federatedHandle, 'followers');
-
+ 
   const {
     list: following,
     loading: isFollowingLoading,
     hasMore: hasMoreFollowing,
     loadMore: loadMoreFollowing
   } = usePaginatedConnections(federatedHandle, 'following');
-
-  const userPosts = (postsData?.posts ?? []).map(post => ({
+ 
+  // --- End of Changes ---
+ 
+  const userPosts: FederatedPost[] = (postsData?.posts ?? []).map(post => ({
     id: post._id,
-    user_id: post.userId,
-    username: apiUser?.username || 'unknown',
-    caption: post.caption,
-    hashtags: post.hashtags,
-    media: post.media.map((m: any, index: number) => ({
-      id: `${post._id}-${index}`,
-      url: m.url,
-      type: m.mediaType,
-    })),
-    likes_count: post.likes_count ?? 0,
-    comments_count: post.comments_count ?? 0,
-    created_at: post.createdAt,
+    content: post.caption,
+    contentMediaType: 'text/html', // adjust if you're storing plain text or markdown
+    attachment: post.media?.[0]
+      ? {
+          type: post.media[0].mediaType === 'video' ? 'video' : 'image',
+          url: post.media[0].url,
+          name: post.media[0].name || '',
+        }
+      : undefined,
+    likesCount: post.likes_count ?? 0,
+    repliesCount: post.comments_count ?? 0,
+    createdAt: post.createdAt,
+    author: {
+      id: apiUser?.username || 'local-user',
+      handle: `@${apiUser?.username}@mastagram.local`, // adjust if needed
+      name: apiUser?.displayName || apiUser?.username || 'Unknown',
+      avatar: apiUser?.avatarUrl || '',
+    },
   }));
-
+ 
+ 
+  // Map the federated profile data to the userData object
   const userData = {
-    id: '1',
+    id: federatedProfileQuery.data?.id || '1',
     username: federatedProfileQuery.data?.handle || '',
     display_name: federatedProfileQuery.data?.name || '',
     bio: federatedProfileQuery.data?.bio || '',
-    avatar_url: apiUser?.avatarUrl || '',
+    avatar_url: federatedProfileQuery.data?.avatarUrl || '',
     following: federatedProfileQuery.data?.following ?? 0,
     followers: federatedProfileQuery.data?.followers ?? 0,
     posts_count: postsData?.posts.length ?? 0,
     verified: true
   };
-
+ 
   const mappedList = (connectionsTab === 'followers' ? followers : following).map(user => ({
     id: user.id,
     username: user.handle,
     display_name: user.name,
     avatar_url: `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
   }));
-
+ 
   const isConnectionsLoading = connectionsTab === 'followers' ? isFollowersLoading : isFollowingLoading;
   const hasMoreConnections = connectionsTab === 'followers' ? hasMoreFollowers : hasMoreFollowing;
   const loadMoreConnections = connectionsTab === 'followers' ? loadMoreFollowers : loadMoreFollowing;
-
+ 
   const filteredList = mappedList.filter(user =>
     user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
+ 
   // Intersection Observer for infinite scroll
   useEffect(() => {
     if (!showConnections || !hasMoreConnections || isConnectionsLoading) return;
-
+ 
     const options = {
       root: null,
       rootMargin: '100px',
       threshold: 0.1,
     };
-
+ 
     const handleObserver = (entries: IntersectionObserverEntry[]) => {
       const [entry] = entries;
       if (entry.isIntersecting) {
         loadMoreConnections();
       }
     };
-
+ 
     observerRef.current = new IntersectionObserver(handleObserver, options);
-
+ 
     if (sentinelRef.current) {
       observerRef.current.observe(sentinelRef.current);
     }
-
+ 
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
     };
   }, [showConnections, connectionsTab, isConnectionsLoading, hasMoreConnections, loadMoreConnections]);
-
+ 
   const isProfileDataLoading = isLoading || federatedProfileQuery.isLoading;
-
-  if (isProfileDataLoading || isPostsLoading) {
+ 
+  if (isProfileDataLoading) {
     return (
       <div className="skeleton-container">
         <div className="skeleton-avatar"></div>
@@ -266,32 +287,34 @@ const Profile = () => {
       </div>
     );
   }
-
+ 
   if (error || federatedProfileQuery.isError) {
     return <div className="empty-state">Failed to load profile.</div>;
   }
-
+ 
   return (
     <div className="profile-container">
       <header className="header">
         <div className="header-content">
-          {showConnections ? (
-            <button onClick={() => setShowConnections(false)} className="back-button">
-              <ChevronLeft style={{ width: '1.5rem', height: '1.5rem' }} />
-              <span>Back</span>
-            </button>
-          ) : (
-            <Link to="/feed">
+          {/* --- Start of Changes (Header) --- */}
+          {isViewingOwnProfile ? (
+            <Link to="/profile">
               <ArrowLeft style={{ width: '1.5rem', height: '1.5rem', color: 'hsl(var(--foreground))' }} />
+            </Link>
+          ) : (
+            <Link to="/profile">
+              <ChevronLeft style={{ width: '1.5rem', height: '1.5rem' }} />
+              <span>Back to my profile</span>
             </Link>
           )}
           <h1 className="header-title">{userData.username}</h1>
           <Link to="/settings">
             <Settings style={{ width: '1.5rem', height: '1.5rem', color: 'hsl(var(--foreground))' }} />
           </Link>
+          {/* --- End of Changes (Header) --- */}
         </div>
       </header>
-
+ 
       <main className="main-content">
         {showConnections ? (
           <div className="connections-tabs">
@@ -309,7 +332,7 @@ const Profile = () => {
                 Following
               </button>
             </div>
-
+ 
             <div className="search-input-wrapper">
               <input
                 type="text"
@@ -319,48 +342,60 @@ const Profile = () => {
                 className="search-input"
               />
             </div>
-
+ 
             <ul className="user-list">
+              {/* --- Start of Changes (User List) --- */}
               {filteredList.length > 0 ? (
                 filteredList.map(user => (
-                  <li key={user.id} className="user-list-item">
-                    <img src={user.avatar_url} alt={user.display_name} className="user-list-avatar" />
-                    <div className="user-list-info">
-                      <p className="user-list-name">{user.display_name}</p>
-                      <p className="user-list-handle">{user.username}</p>
-                    </div>
-                  </li>
+                  <Link
+                    to={`/profile/${user.username.replace('@', '')}`}
+                    key={user.id}
+                    className="user-list-link"
+                    onClick={() => {
+                        // Reset connections view when navigating to a new profile
+                        setShowConnections(false);
+                    }}
+                  >
+                    <li className="user-list-item">
+                      <img src={user.avatar_url} alt={user.display_name} className="user-list-avatar" />
+                      <div className="user-list-info">
+                        <p className="user-list-name">{user.display_name}</p>
+                        <p className="user-list-handle">{user.username}</p>
+                      </div>
+                    </li>
+                  </Link>
                 ))
               ) : (
                 !isConnectionsLoading && <p className="empty-state">No users found.</p>
               )}
+              {/* --- End of Changes (User List) --- */}
             </ul>
-            
+           
             {/* Sentinel element for infinite scroll */}
             <div ref={sentinelRef} style={{ height: '1px', width: '100%' }} />
-            
+           
             {/* Loading spinner at the bottom */}
             {isConnectionsLoading && (
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
                 padding: '20px',
                 minHeight: '60px'
               }}>
-                <Loader2 style={{ 
-                  width: '24px', 
-                  height: '24px', 
-                  animation: 'spin 1s linear infinite' 
+                <Loader2 style={{
+                  width: '24px',
+                  height: '24px',
+                  animation: 'spin 1s linear infinite'
                 }} />
               </div>
             )}
-
+ 
             {!hasMoreConnections && mappedList.length > 0 && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '20px', 
-                color: '#666' 
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                color: '#666'
               }}>
                 No more users to show
               </div>
@@ -405,13 +440,13 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-
+ 
               <div className="profile-info">
                 <h2>{userData.display_name}</h2>
                 <p>{userData.bio}</p>
               </div>
             </section>
-
+ 
             <div className="tabs-container">
               <div className="tabs-list">
                 <button
@@ -433,7 +468,7 @@ const Profile = () => {
                   <Bookmark style={{ width: '1rem', height: '1rem' }} /> Saved
                 </button>
               </div>
-
+ 
               {activeTab === 'posts' && (
                 <div className="tabs-content">
                   {userPosts.map(post => (
@@ -462,5 +497,5 @@ const Profile = () => {
     </div>
   );
 };
-
+ 
 export default Profile;

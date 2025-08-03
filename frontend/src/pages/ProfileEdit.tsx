@@ -26,7 +26,8 @@ const ProfileEdit = () => {
   type ProfileResponse = {
     username?: string;
     email?: string;
-    displayName?: string;
+    displayName?: string;     
+    name?: string;             // fallback when backend sends `name`
     avatarUrl?: string;
     bio?: string;
   };
@@ -53,7 +54,7 @@ const ProfileEdit = () => {
     if (profile) {
       setFormData(prev => ({
         ...prev,
-        displayName: profile.displayName ?? '',
+        displayName: profile.displayName ?? profile.name ?? '',
         username: profile.username ?? '',
         bio: profile.bio ?? '',
         avatar: null,
@@ -98,7 +99,6 @@ const ProfileEdit = () => {
     e.preventDefault();
     setIsLoading(true);
     const form = new FormData();
-    if (formData.username) form.append('username', formData.username);
     if (formData.displayName) form.append('displayName', formData.displayName);
     if (formData.bio) form.append('bio', formData.bio);
     if (formData.avatar) form.append('avatar', formData.avatar);
@@ -201,9 +201,13 @@ const ProfileEdit = () => {
                 id="username"
                 name="username"
                 value={formData.username}
-                onChange={handleChange}
-                className="mt-1"
+                readOnly
+                disabled
+                className="mt-1 opacity-60 cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Username cannot be changed.
+              </p>
             </div>
 
             <div>
