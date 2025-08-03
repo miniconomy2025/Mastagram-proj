@@ -3,8 +3,8 @@ import config from "../config.ts";
 import logger from "../logger.ts";
 import redisClient from "../redis.ts";
 
-export async function cachedLookupObject<T>(ctx: Context<T>, handle: string): Promise<Object | null> {
-    const cacheKey = `mastagram::network_objects_cache::"${handle}"`;
+export async function cachedLookupObject<T>(ctx: Context<T>, id: string): Promise<Object | null> {
+    const cacheKey = `mastagram::network_objects_cache::"${id}"`;
 
     const cachedObject = await redisClient.get(cacheKey);
     if (cachedObject) {
@@ -20,7 +20,7 @@ export async function cachedLookupObject<T>(ctx: Context<T>, handle: string): Pr
     
     try {
         logger.debug`object was not in cache, fetching...`;
-        const object = await ctx.lookupObject(handle);
+        const object = await ctx.lookupObject(id);
         logger.debug`fetched object: ${!!object}`;
 
         if (object) {

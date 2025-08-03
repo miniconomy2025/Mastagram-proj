@@ -37,6 +37,7 @@
     "@fedify/redis": "^0.4.0",
     "@js-temporal/polyfill": "^0.5.1",
     "@logtape/logtape": "^0.8.2",
+    "base64url": "^3.0.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^4.19.2",
