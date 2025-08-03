@@ -4,7 +4,11 @@ import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import redisClient from "../redis.ts";
 import { parseCursor } from "../utils/pagination.ts";
-import { findFeedDataByPostIds, findFeedDataByUserId, saveFeedData } from "../queries/feed.queries.ts";
+import { commentOnPost, findFeedDataByPostIds, findFeedDataByUserId, getUploaderId, likePost, saveFeedData, unlikePost } from "../queries/feed.queries.ts";
+import type { CommentModel, LikeModel } from "../types/interactions.js";
+import { notificationManager, type CommentNotification, type LikeNotification } from "./notifications.controller.ts";
+import federation, { createContext } from "../federation/federation.ts";
+import { Like, Undo, type Recipient } from "@fedify/fedify";
 
 interface CreateFeedData {
     caption?: string;
@@ -258,4 +262,166 @@ export class FeedController {
             return res.status(500).json({ message: "Failed to fetch user posts" });
         }
     };
+
+    likePost = async (req: Request, res: Response): Promise<Response> => {
+        const username = req.user?.username;
+        if (!username) {
+            return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        const postId = req.params.postId;
+        if (!postId) {
+            return res.status(400).json({ message: "Post ID is required" });
+        }
+
+        try {
+            const uploaderId = await getUploaderId(postId);
+            if (uploaderId) {
+                const like: LikeModel = {
+                    postId,
+                    likedBy: username,
+                    likedAt: new Date(),
+                };
+                await likePost(like);
+                const likeNotification: LikeNotification = {
+                    type: 'like',
+                    ...like,
+                }
+
+                notificationManager.sendToUser(uploaderId, likeNotification);
+            } else {
+                const ctx = createContext(federation, req);
+                const postObject = await ctx.lookupObject(postId);
+
+                if (postObject && postObject.attributionId) {
+                    const recipientActor = await ctx.lookupObject(postObject.attributionId);
+                    if (!recipientActor?.id) {
+                        return res.status(404).json({ message: "Recipient actor not found" });
+                    }
+
+                    if (!('inboxId' in recipientActor)) {
+                        return res.status(400).json({ message: "Recipient actor is missing inbox information" });
+                    }
+
+                    const senderActorId = ctx.getActorUri(username);
+                    if (!senderActorId) {
+                        return res.status(400).json({ message: "Invalid sender username" });
+                    }
+
+                    const likeActivity = new Like({
+                        actor: senderActorId,
+                        object: postObject.id ?? postObject,
+                        to: recipientActor.id,
+                    });
+
+                    await ctx.sendActivity(
+                        { username },
+                        recipientActor as Recipient,
+                        likeActivity
+                    );
+                }
+
+            }
+            return res.status(200).json({ message: "Post liked successfully" });
+        } catch (error) {
+            return res.status(500).json({ message: "Failed to like post" });
+        }
+    }
+
+    unlikePost = async (req: Request, res: Response): Promise<Response> => {
+        const username = req.user?.username;
+        if (!username) {
+            return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        const postId = req.params.postId;
+        if (!postId) {
+            return res.status(400).json({ message: "Post ID is required" });
+        }
+
+        try {
+            const uploaderId = await getUploaderId(postId);
+            if (uploaderId) {
+                await unlikePost(username, postId);
+            } else {
+                const ctx = createContext(federation, req);
+                const postObject = await ctx.lookupObject(postId);
+                if (postObject && postObject.attributionId) {
+                    const recipientActor = await ctx.lookupObject(postObject.attributionId);
+                    if (!recipientActor?.id) {
+                        return res.status(404).json({ message: "Recipient actor not found" });
+                    }
+                    if (!('inboxId' in recipientActor)) {
+                        return res.status(400).json({ message: "Recipient actor is missing inbox information" });
+                    }
+                    const senderActorId = ctx.getActorUri(username);
+                    if (!senderActorId) {
+                        return res.status(400).json({ message: "Invalid sender username" });
+                    }
+                    const likeActivity = new Like({
+                        actor: senderActorId,
+                        object: postObject.id ?? postObject,
+                        to: recipientActor.id,
+                    });
+                    const undoActivity = new Undo({
+                        actor: senderActorId,
+                        object: likeActivity,
+                        to: recipientActor.id,
+                    });
+                    await ctx.sendActivity(
+                        { username },
+                        recipientActor as Recipient,
+                        undoActivity
+                    );
+                }
+            }
+            return res.status(200).json({ message: "Post unliked successfully" });
+        } catch (error) {
+            return res.status(500).json({ message: "Failed to unlike post" });
+        }
+    }
+
+    commentOnPost = async (req: Request, res: Response): Promise<Response> => {
+        const username = '15f4fee3-bf4d-4a26-b509-525ca919c983';
+        if (!username) {
+            return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        const postId = req.params.postId;
+        if (!postId) {
+            return res.status(400).json({ message: "Post ID is required" });
+        }
+
+        const { content } = req.body;
+        if (!content || content.trim() === '') {
+            return res.status(400).json({ message: "Comment content is required" });
+        }
+
+        try {
+            const uploaderId = await getUploaderId(postId);
+            if (uploaderId) {
+                const comment: CommentModel = {
+                    postId,
+                    commentedBy: username,
+                    content: content.trim(),
+                    commentedAt: new Date(),
+                };
+                await commentOnPost(comment);
+                const commentNotification: CommentNotification = {
+                    type: 'comment',
+                    postId,
+                    commentedBy: username,
+                    content: comment.content,
+                    commentedAt: comment.commentedAt,
+                };
+                notificationManager.sendToUser(uploaderId, commentNotification);
+            } else {
+                // To do: Handle federation case
+            }
+                
+            return res.status(200).json({ message: "Comment added successfully" });
+        } catch (error) {
+            return res.status(500).json({ message: "Failed to add comment" });
+        }
+    }
 }

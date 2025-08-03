@@ -2,6 +2,8 @@ import { Accept, Add, Announce, Block, Create, Delete, Follow, Like, Reject, Rem
 import logger from "../logger.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import { createFollower, deleteFollower } from "../queries/follower.queries.ts";
+import { likePost } from "../queries/feed.queries.ts";
+import type { LikeModel } from "../types/interactions.js";
 
 function unimplemented<T>(message?: T) {
     if (message != null)
@@ -62,7 +64,20 @@ export function addInboxListeners<T>(federation: Federation<T>) {
         .on(Delete, async (_ctx, del) => unimplemented(del))
         .on(Add, async (_ctx, add) => unimplemented(add))
         .on(Remove, async (_ctx, remove) => unimplemented(remove))
-        .on(Like, async (_ctx, like) => unimplemented(like))
+        .on(Like, async (_ctx, like) => {
+            const liker = await like.getActor();
+            const post = await like.getObject();
+            if (!liker || !post || !liker.id || !post.id) {
+                logger.error`Invalid Like, actor or object is null`;
+            } else {
+                const like: LikeModel = {
+                    postId: post.id.href,
+                    likedBy: liker.id.href,
+                    likedAt: new Date(Temporal.Now.instant().epochMilliseconds),
+                };
+                await likePost(like);
+            }
+        })
         .on(Announce, async (_ctx, announce) => unimplemented(announce))
         .on(Block, async (_ctx, block) => unimplemented(block))
         .on(Undo, async (ctx, undo) => {

@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const redisUrl = process.env.REDIS_URL;
 const mongoUrl = process.env.MONGO_URL;
 const dbName = process.env.MONGO_DB_NAME;
