@@ -3,7 +3,7 @@ import { SocialPost } from '@/components/SocialPost';
 import { Loader2, Home, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { getPosts } from '@/services/federation.service';
+import { getFeeds } from '@/services/federation.service';
 import { FederatedPost } from '@/types/federation';
 
 const Index = () => {
@@ -21,10 +21,10 @@ const Index = () => {
     setError(null);
 
     try {
-      const data = await getPosts('@Third3King@mastodon.social', nextCursor);
+      const data = await getFeeds(nextCursor);
       
-      setPosts(prev => [...prev, ...data.items]);
       setHasMore(!!data.next);
+      setPosts(prev => [...prev, ...data.items]);
       setNextCursor(data.next ? extractCursor(data.next) : undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load posts');

@@ -94,3 +94,34 @@ export const getPosts = async (
     throw error;
   }
 };
+
+export const getFeeds = async (
+  userId: string,
+  cursor?: string
+): Promise<PaginatedResponse<FederatedPost>> => {
+  try {
+    const url = new URL(`${API_BASE_URL}/me/following/posts`);
+    if (cursor) url.searchParams.append('cursor', cursor);
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      items: data.items.filter((item: any) => item !== null) as FederatedPost[],
+      total: data.count,
+      next: data.next,
+    };
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    throw error;
+  }
+};
