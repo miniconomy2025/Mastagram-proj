@@ -19,6 +19,7 @@ import AuthCallback from "./pages/AuthCallback";
 import Saved from "./pages/Saved";
 import Trending from "./pages/Trending";
 import PostDetail from "./pages/PostDetail";
+import { FollowingList } from "./components/FollowingList";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     </div>
   );
 };
+
+const userId = "@Mastodon@mastodon.social"
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -55,6 +58,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/post/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
+            <Route path="/test" element={<ProtectedRoute><FollowingList userId={userId} /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth/callback" element={<AuthCallback/>} />
             <Route path="*" element={<NotFound />} />
