@@ -15,4 +15,9 @@ router.get("/", feedController.getUserFeed);
 
 router.get("/mine", feedController.getMyPosts);
 
+router.post("/:postId/like", feedController.likePost);
+
+router.post("/:postId/unlike", feedController.unlikePost);
+router.post("/:postId/comment", feedController.commentOnPost);
+
 export default router;

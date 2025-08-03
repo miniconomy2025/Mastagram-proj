@@ -3,6 +3,7 @@ import authRouter from './auth.router.ts';
 import profileRouter from './profile.router.ts';
 import feedRouter from './feed.router.ts';
 import federationRouter from './federation.router.ts';
+import notificationsRouter from './notifications.router.ts';
 
 const apiRouter = Router();
 
@@ -10,6 +11,7 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/profile', profileRouter);
 apiRouter.use('/feed', feedRouter);
 apiRouter.use('/federation', federationRouter);
+apiRouter.use('/notifications', notificationsRouter);
 
 // Health check endpoint
 apiRouter.get('/health', (req, res) => {
