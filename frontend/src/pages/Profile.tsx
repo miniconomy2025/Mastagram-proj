@@ -6,7 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 type ApiUser = {
   username?: string;
   email?: string;
-  displayName?: string;
+  displayName?: string; // preferred key
+  name?: string;        // fallback when backend sends `name`
   avatarUrl?: string;
   bio?: string;
 };
@@ -113,7 +114,7 @@ const Profile = () => {
   const userData = {
     id: '1',
     username: apiUser?.username || ' ',
-    display_name: apiUser?.displayName || ' ',
+    display_name: apiUser?.displayName ?? (apiUser as any)?.name ?? ' ',
     bio: apiUser?.bio || ' ',
     avatar_url: apiUser?.avatarUrl || ' ',
     ...MOCK_USER_META
