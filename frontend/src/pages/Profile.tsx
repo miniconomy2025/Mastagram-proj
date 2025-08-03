@@ -222,7 +222,7 @@ const Profile = () => {
     avatar_url: federatedProfileQuery.data?.avatarUrl || '',
     following: federatedProfileQuery.data?.following ?? 0,
     followers: federatedProfileQuery.data?.followers ?? 0,
-    posts_count: postsData?.posts.length ?? 0,
+    posts_count: postsData?.posts?.length ?? 0,
     verified: true
   };
  
