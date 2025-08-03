@@ -2,7 +2,7 @@ import { Router } from "express";
 import federation, { createContext } from "../federation/federation.ts";
 import logger from "../logger.ts";
 import { cachedLookupObject } from "../federation/lookup.ts";
-import { Collection, CollectionPage, Create, Document, Image, isActor, Link, type Actor, Note, Object, Video, type Context, type Collection } from "@fedify/fedify";
+import { Collection, CollectionPage, Create, Document, Image, isActor, Link, type Actor, Note, Object, Video, type Context } from "@fedify/fedify";
 import base64url from "base64url";
 
 const UNEXPECTED_ERROR = 'An unexpected error has occurred.';
