@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useApiQuery, api, auth } from '@/lib/api';
 import {
   ArrowLeft,
@@ -13,11 +13,6 @@ import {
 import { Link, useParams } from 'react-router-dom';
 import { SocialPost } from '@/components/SocialPost';
 import './Profile.css';
-
-const MOCK_USER_META = {
-  posts_count: 89,
-  verified: true
-};
 
 type ApiUser = {
   username?: string;
@@ -46,36 +41,79 @@ interface UserListItem {
 interface UserListResponse {
   items: UserListItem[];
   total: number;
+  next?: string;
 }
 
-const useUserProfile = (username: string | undefined) => {
+const useUserProfile = (handle: string | undefined) => {
   return useApiQuery<UserProfileResponse>(
-    ['userProfile', username],
-    username ? `/federation/users/@test@mastodon.social` : '',
-    {
-      enabled: !!username,
-    }
+    ['userProfile', handle],
+    handle ? `/federation/users/${handle}` : '',
+    { enabled: !!handle }
   );
 };
 
-const useUserFollowers = (username: string | undefined) => {
-  return useApiQuery<UserListResponse>(
-    ['userFollowers', username],
-    username ? `/federation/users/@test@mastodon.social/followers` : '',
-    {
-      enabled: !!username,
-    }
-  );
-};
+const usePaginatedConnections = (
+  handle: string | undefined,
+  type: 'followers' | 'following'
+) => {
+  const [list, setList] = useState<UserListItem[]>([]);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
-const useUserFollowing = (username: string | undefined) => {
-  return useApiQuery<UserListResponse>(
-    ['userFollowing', username],
-    username ? `/federation/users/@test@mastodon.social/following` : '',
-    {
-      enabled: !!username,
+  const fetchList = useCallback(async (url?: string) => {
+    if (!handle || loading) return;
+    
+    try {
+      setLoading(true);
+      let endpoint: string;
+      
+      if (url) {
+        // Pagination: pass the full URL as a query parameter
+        endpoint = `/federation/users/${handle}/${type}?page=${encodeURIComponent(url)}`;
+      } else {
+        // Initial load: use base endpoint
+        endpoint = `/federation/users/${handle}/${type}`;
+      }
+      
+      const res = await api.get<UserListResponse>(endpoint);
+      
+      if (!url) {
+        // Initial load
+        setList(res.items);
+      } else {
+        // Pagination load
+        setList(prev => [...prev, ...res.items]);
+      }
+      
+      setNextUrl(res.next ?? null);
+      setHasMore(!!res.next);
+    } catch (error) {
+      console.error('Error fetching connections:', error);
+    } finally {
+      setLoading(false);
     }
-  );
+  }, [handle, type, loading]);
+
+  const loadMore = useCallback(() => {
+    if (nextUrl && !loading && hasMore) {
+      fetchList(nextUrl);
+    }
+  }, [nextUrl, loading, hasMore, fetchList]);
+
+  useEffect(() => {
+    setList([]);
+    setNextUrl(null);
+    setHasMore(true);
+    fetchList();
+  }, [handle, type]);
+
+  return {
+    list,
+    loading,
+    hasMore,
+    loadMore,
+  };
 };
 
 type TabValue = 'posts' | 'liked' | 'saved';
@@ -88,14 +126,15 @@ const Profile = () => {
   const [showConnections, setShowConnections] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // This fetch is for the logged-in user's posts, not a public profile.
-  const { data: postsData, isLoading: isPostsLoading, error: postsError } = useApiQuery<{ posts: any[] }>(
+  const connectionsContainerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver>();
+
+  const { data: postsData, isLoading: isPostsLoading } = useApiQuery<{ posts: any[] }>(
     ['user-posts'],
     '/feed/mine'
   );
 
-  // This fetch is for the currently logged-in user's profile data
-  // The username is derived from the auth token
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -104,7 +143,6 @@ const Profile = () => {
     const fetchProfile = async () => {
       try {
         setIsLoading(true);
-        setError(null);
         const profileData = await api.get<ApiUser>('/profile');
         setApiUser(profileData);
       } catch (err) {
@@ -121,11 +159,23 @@ const Profile = () => {
   }, []);
 
   const profileUsername = routeUsername || apiUser?.email?.split('@')[0];
-  const federatedHandle = profileUsername ? `${profileUsername}@mastodon.social` : undefined;
+  const federatedHandle = profileUsername ? `@Mastodon@mastodon.social` : undefined;
 
   const federatedProfileQuery = useUserProfile(federatedHandle);
-  const followersQuery = useUserFollowers(federatedHandle);
-  const followingQuery = useUserFollowing(federatedHandle);
+
+  const {
+    list: followers,
+    loading: isFollowersLoading,
+    hasMore: hasMoreFollowers,
+    loadMore: loadMoreFollowers
+  } = usePaginatedConnections(federatedHandle, 'followers');
+
+  const {
+    list: following,
+    loading: isFollowingLoading,
+    hasMore: hasMoreFollowing,
+    loadMore: loadMoreFollowing
+  } = usePaginatedConnections(federatedHandle, 'following');
 
   const userPosts = (postsData?.posts ?? []).map(post => ({
     id: post._id,
@@ -145,37 +195,62 @@ const Profile = () => {
 
   const userData = {
     id: '1',
-    username: apiUser?.username || ' ',
-    display_name: apiUser?.displayName || ' ',
-    bio: apiUser?.bio || ' ',
-    avatar_url: apiUser?.avatarUrl || ' ',
+    username: federatedProfileQuery.data?.handle || '',
+    display_name: federatedProfileQuery.data?.name || '',
+    bio: federatedProfileQuery.data?.bio || '',
+    avatar_url: apiUser?.avatarUrl || '',
     following: federatedProfileQuery.data?.following ?? 0,
     followers: federatedProfileQuery.data?.followers ?? 0,
     posts_count: postsData?.posts.length ?? 0,
     verified: true
   };
 
-  const mappedFollowers = (followersQuery.data?.items ?? []).map(user => ({
+  const mappedList = (connectionsTab === 'followers' ? followers : following).map(user => ({
     id: user.id,
     username: user.handle,
     display_name: user.name,
     avatar_url: `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
   }));
 
-  const mappedFollowing = (followingQuery.data?.items ?? []).map(user => ({
-    id: user.id,
-    username: user.handle,
-    display_name: user.name,
-    avatar_url: `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
-  }));
+  const isConnectionsLoading = connectionsTab === 'followers' ? isFollowersLoading : isFollowingLoading;
+  const hasMoreConnections = connectionsTab === 'followers' ? hasMoreFollowers : hasMoreFollowing;
+  const loadMoreConnections = connectionsTab === 'followers' ? loadMoreFollowers : loadMoreFollowing;
 
-  const displayedList = connectionsTab === 'followers' ? mappedFollowers : mappedFollowing;
-  const filteredList = displayedList.filter((user) =>
+  const filteredList = mappedList.filter(user =>
     user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!showConnections || !hasMoreConnections || isConnectionsLoading) return;
+
+    const options = {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1,
+    };
+
+    const handleObserver = (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries;
+      if (entry.isIntersecting) {
+        loadMoreConnections();
+      }
+    };
+
+    observerRef.current = new IntersectionObserver(handleObserver, options);
+
+    if (sentinelRef.current) {
+      observerRef.current.observe(sentinelRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [showConnections, connectionsTab, isConnectionsLoading, hasMoreConnections, loadMoreConnections]);
+
   const isProfileDataLoading = isLoading || federatedProfileQuery.isLoading;
-  const isConnectionsLoading = followersQuery.isLoading || followingQuery.isLoading;
 
   if (isProfileDataLoading || isPostsLoading) {
     return (
@@ -198,14 +273,10 @@ const Profile = () => {
 
   return (
     <div className="profile-container">
-      {/* Header */}
       <header className="header">
         <div className="header-content">
           {showConnections ? (
-            <button
-              onClick={() => setShowConnections(false)}
-              className="back-button"
-            >
+            <button onClick={() => setShowConnections(false)} className="back-button">
               <ChevronLeft style={{ width: '1.5rem', height: '1.5rem' }} />
               <span>Back</span>
             </button>
@@ -214,9 +285,7 @@ const Profile = () => {
               <ArrowLeft style={{ width: '1.5rem', height: '1.5rem', color: 'hsl(var(--foreground))' }} />
             </Link>
           )}
-          <h1 className="header-title">
-            {userData.username}
-          </h1>
+          <h1 className="header-title">{userData.username}</h1>
           <Link to="/settings">
             <Settings style={{ width: '1.5rem', height: '1.5rem', color: 'hsl(var(--foreground))' }} />
           </Link>
@@ -225,78 +294,85 @@ const Profile = () => {
 
       <main className="main-content">
         {showConnections ? (
-          <>
-            <div className="connections-tabs">
-              <div className="connections-tabs-list">
-                <button
-                  className={`connections-tabs-trigger ${connectionsTab === 'followers' ? 'active' : ''}`}
-                  onClick={() => setConnectionsTab('followers')}
-                >
-                  Followers
-                </button>
-                <button
-                  className={`connections-tabs-trigger ${connectionsTab === 'following' ? 'active' : ''}`}
-                  onClick={() => setConnectionsTab('following')}
-                >
-                  Following
-                </button>
-              </div>
-
-              <div className="search-input-wrapper">
-                <input
-                  type="text"
-                  placeholder="Search users"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="search-input"
-                />
-              </div>
-
-              <div>
-                {isConnectionsLoading ? (
-                  <div className="loader-wrapper">
-                    <Loader2 className="loader" />
-                  </div>
-                ) : (
-                  <ul className="user-list">
-                    {filteredList.length > 0 ? (
-                      filteredList.map((user) => (
-                        <li key={user.id} className="user-list-item">
-                          <img
-                            src={user.avatar_url}
-                            alt={user.display_name}
-                            className="user-list-avatar"
-                          />
-                          <div className="user-list-info">
-                            <p className="user-list-name">{user.display_name}</p>
-                            <p className="user-list-handle">{user.username}</p>
-                          </div>
-                        </li>
-                      ))
-                    ) : (
-                      <p className="empty-state">
-                        No users found.
-                      </p>
-                    )}
-                  </ul>
-                )}
-              </div>
+          <div className="connections-tabs">
+            <div className="connections-tabs-list">
+              <button
+                className={`connections-tabs-trigger ${connectionsTab === 'followers' ? 'active' : ''}`}
+                onClick={() => setConnectionsTab('followers')}
+              >
+                Followers
+              </button>
+              <button
+                className={`connections-tabs-trigger ${connectionsTab === 'following' ? 'active' : ''}`}
+                onClick={() => setConnectionsTab('following')}
+              >
+                Following
+              </button>
             </div>
-          </>
+
+            <div className="search-input-wrapper">
+              <input
+                type="text"
+                placeholder="Search users"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
+
+            <ul className="user-list">
+              {filteredList.length > 0 ? (
+                filteredList.map(user => (
+                  <li key={user.id} className="user-list-item">
+                    <img src={user.avatar_url} alt={user.display_name} className="user-list-avatar" />
+                    <div className="user-list-info">
+                      <p className="user-list-name">{user.display_name}</p>
+                      <p className="user-list-handle">{user.username}</p>
+                    </div>
+                  </li>
+                ))
+              ) : (
+                !isConnectionsLoading && <p className="empty-state">No users found.</p>
+              )}
+            </ul>
+            
+            {/* Sentinel element for infinite scroll */}
+            <div ref={sentinelRef} style={{ height: '1px', width: '100%' }} />
+            
+            {/* Loading spinner at the bottom */}
+            {isConnectionsLoading && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                padding: '20px',
+                minHeight: '60px'
+              }}>
+                <Loader2 style={{ 
+                  width: '24px', 
+                  height: '24px', 
+                  animation: 'spin 1s linear infinite' 
+                }} />
+              </div>
+            )}
+
+            {!hasMoreConnections && mappedList.length > 0 && (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '20px', 
+                color: '#666' 
+              }}>
+                No more users to show
+              </div>
+            )}
+          </div>
         ) : (
           <>
             <section className="profile-section">
               <div className="profile-header">
                 <div className="avatar-wrapper">
-                  <img
-                    src={userData.avatar_url}
-                    alt="avatar"
-                    className="avatar-image"
-                  />
-                  <button
-                    aria-label="Change avatar"
-                    className="change-avatar-button"
-                  >
+                  <img src={userData.avatar_url} alt="avatar" className="avatar-image" />
+                  <button aria-label="Change avatar" className="change-avatar-button">
                     <Camera style={{ width: '1rem', height: '1rem', color: 'white' }} />
                   </button>
                 </div>
@@ -313,9 +389,7 @@ const Profile = () => {
                       }}
                       className="stat-item"
                     >
-                      <div className="stat-value">
-                        {userData.followers}
-                      </div>
+                      <div className="stat-value">{userData.followers}</div>
                       <div className="stat-label">Followers</div>
                     </button>
                     <button

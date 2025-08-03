@@ -46,7 +46,7 @@
   margin: 0;
 }
 
-.post-detail-header-info p {
+.post-detail-header-info p {  
   font-size: 0.875rem;
   color: hsl(var(--muted-foreground));
   margin: 0;
@@ -55,7 +55,7 @@
 .post-detail-main {
   max-width: 32rem;
   margin: 0 auto;
-  padding: 0 1rem 2rem 1rem;
+  padding: 0 1rem 6rem 1rem;
 }
 
 .post-detail-card {

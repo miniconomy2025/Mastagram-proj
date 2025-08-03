@@ -81,6 +81,7 @@
   .main-content {
     max-width: 28rem;
     margin: 0 auto;
+    padding-bottom: 6rem;
   }
   
   .profile-section {
