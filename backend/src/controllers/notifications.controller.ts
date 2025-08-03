@@ -1,14 +1,17 @@
 import SeverSideEventsManager from '../configs/sever-side-events-manager.config.ts';
 import type { Request, Response } from 'express';
 import type { CommentModel, FollowModel, LikeModel } from '../types/interactions.js';
+import { getCollection } from '../queries/client.ts';
+import { getNotificationsForUser, updateReadStatus } from '../queries/feed.queries.ts';
 
-export type NotificationType = 'like' | 'follow' | 'comment';
-
+export type NotificationType = 'like' | 'comment' | 'follow';
 export interface Notification {
     type: NotificationType;
     targetId: string;
     userId: string;
     createdAt: Date;
+    content?: string;
+    read: boolean; 
 }
 
 
@@ -44,5 +47,30 @@ export class NotificationController {
 
         notificationManager.removeClient(userId);
         res.status(204).send();
+    }
+
+    getNotifications = async (req: Request, res: Response): Promise<void> => {
+        const userId = req.user?.username;
+        if (!userId) {
+            res.status(400).json({ message: 'User ID is required' });
+            return;
+        }
+        const notifications = await getNotificationsForUser(userId);
+        res.json(notifications);
+    }
+
+    updateReadStatus = async (req: Request, res: Response): Promise<void> => {
+        const notificationId = req.params.id;
+        if (!notificationId) {
+            res.status(400).json({ error: 'Invalid request body' });
+            return;
+        }
+
+        try {
+            await updateReadStatus(notificationId, true);
+            res.status(200).send();
+        } catch (error) {
+            res.status(500).json({ message: 'Failed to update notification status' });
+        }
     }
 }

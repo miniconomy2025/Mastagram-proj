@@ -2,6 +2,7 @@ import { type FeedData } from "../controllers/feed.controller.ts";
 import type { CommentModel, LikeModel } from "../types/interactions.js";
 import { getCollection } from "./client.ts";
 import { ObjectId } from "mongodb";
+import type { Notification } from "../controllers/notifications.controller.ts";
 
 function feedCollection() {
     return getCollection<FeedData>('feed');
@@ -16,7 +17,7 @@ function commentsCollection() {
 }
 
 function notificationsCollection() {
-    return getCollection('notifications');
+    return getCollection<Notification>('notifications');
 }
 
 export async function findFeedDataByUserId(userId: string, limit: number): Promise<(FeedData & { likes: number; comments: number })[]> {
@@ -60,6 +61,7 @@ export async function likePost(like: LikeModel) {
         targetId: like.postId,
         userId: like.likedBy,
         createdAt: like.likedAt,
+        read: false,
     });
 }
 
@@ -75,14 +77,21 @@ export async function commentOnPost(comment: CommentModel) {
         userId: comment.commentedBy,
         content: comment.content,
         createdAt: comment.commentedAt,
+        read: false,
     });
+}
+
+export async function updateReadStatus(notificationId: string, read: boolean) {
+    await notificationsCollection().updateOne(
+        { _id: new ObjectId(notificationId) },
+        { $set: { read } }
+    );
 }
 
 export async function deleteComment(postId: string, commentId: string) {
     await commentsCollection().deleteOne({ _id: new ObjectId(commentId), postId });
 }
 
-// Helper
 export async function getUploaderId(postId: string): Promise<string | undefined> {
     const feed = await feedCollection().findOne({ feedId: postId });
     return feed?.author;
@@ -91,4 +100,9 @@ export async function getUploaderId(postId: string): Promise<string | undefined>
 export async function saveFeedData(feedData: FeedData) {
     const feed = feedCollection();
     await feed.insertOne(feedData);
+}
+
+export async function getNotificationsForUser(userId: string) {
+    return notificationsCollection().find({ userId }).sort({ createdAt: -1 }).toArray();
+    
 }
