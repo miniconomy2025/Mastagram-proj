@@ -1,5 +1,5 @@
 
-import { getFollowing } from '@/services/federationService';
+import { getFollowing } from '@/services/federation.service';
 import { useState, useEffect, useCallback } from 'react';
 
 interface FederatedUser {

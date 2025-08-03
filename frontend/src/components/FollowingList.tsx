@@ -1,4 +1,4 @@
-import { useInfiniteFollowing } from '@/hooks/useInfiniteFollowing';
+import { useInfiniteFollowing } from '@/hooks/use-infinite-following';
 import { useEffect, useRef } from 'react';
 
 interface FollowingListProps {
