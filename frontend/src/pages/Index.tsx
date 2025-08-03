@@ -23,8 +23,8 @@ const Index = () => {
     try {
       const data = await getPosts('@Third3King@mastodon.social', nextCursor);
       
+      setHasMore(posts.length + data.items.length < data.total);
       setPosts(prev => [...prev, ...data.items]);
-      setHasMore(!!data.next);
       setNextCursor(data.next ? extractCursor(data.next) : undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load posts');

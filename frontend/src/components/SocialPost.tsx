@@ -139,7 +139,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
             <div className="social-post-avatar">{post.author.name.charAt(0).toUpperCase()}</div>
           )}
           <div>
-            <p className="social-post-username">@{post.author.name}</p>
+            <p className="social-post-username">{post.author.name}</p>
             <p className="social-post-date">
               {new Date(post.createdAt).toLocaleDateString()}
             </p>
