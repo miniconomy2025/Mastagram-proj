@@ -18,6 +18,7 @@ function normaliseLink(link: URL | Link | null | undefined): URL | undefined {
 type PaginatedList<T> = {
     items: T[],
     next?: string,
+    count?: number,
 };
 
 async function readCollection(ctx: Context<unknown>, collection: Collection | CollectionPage): Promise<{ items: Object[], next?: URL }> {
@@ -244,6 +245,7 @@ federationRouter.get('/users/:userId/posts', async (req, res) => {
     const response: PaginatedList<FederatedPost> = {
         items,
         next: `/api/federation/users/${req.params.userId}/posts?cursor=${nextCursor}`,
+        count: outbox.totalItems ?? undefined,
     };
     res.json(response);
 });
