@@ -1,0 +1,243 @@
+.post-detail-container {
+  min-height: 100vh;
+  background-color: hsl(var(--background));
+}
+
+.post-detail-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.post-detail-header-content {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.post-detail-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.post-detail-back-btn {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  transition: color 0.2s ease;
+}
+
+.post-detail-back-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.post-detail-header-info h1 {
+  font-family: var(--font-heading);
+  font-weight: bold;
+  font-size: 1.25rem;
+  color: hsl(var(--foreground));
+  margin: 0;
+}
+
+.post-detail-header-info p {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+}
+
+.post-detail-main {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 0 1rem 2rem 1rem;
+}
+
+.post-detail-card {
+  background-color: hsl(var(--card));
+  border-radius: 1rem;
+  box-shadow: var(--shadow-card);
+  border: 1px solid hsl(var(--border));
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.post-detail-post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+}
+
+.post-detail-user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.post-detail-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--primary-foreground));
+  font-weight: bold;
+}
+
+.post-detail-user-details h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: hsl(var(--foreground));
+  margin: 0;
+}
+
+.post-detail-username {
+  color: hsl(var(--primary));
+  font-weight: 500;
+  margin: 0;
+}
+
+.post-detail-timestamp {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+}
+
+.post-detail-more-btn {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+}
+
+.post-detail-more-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.post-detail-caption {
+  padding: 0 1.5rem 1rem 1.5rem;
+}
+
+.post-detail-caption-text {
+  color: hsl(var(--foreground));
+  line-height: 1.6;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.post-detail-hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.post-detail-hashtag {
+  color: hsl(var(--primary));
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.post-detail-media {
+  position: relative;
+}
+
+.post-detail-image {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  object-fit: cover;
+}
+
+.post-detail-actions {
+  padding: 1.5rem;
+}
+
+.post-detail-actions-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.post-detail-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.post-detail-like-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: hsl(var(--muted-foreground));
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+}
+
+.post-detail-like-btn:hover {
+  color: hsl(var(--heart));
+}
+
+.post-detail-like-btn.liked {
+  color: hsl(var(--heart));
+  animation: heart-beat 0.6s ease;
+}
+
+.post-detail-like-btn.liked svg {
+  fill: currentColor;
+}
+
+.post-detail-comment-count {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.post-detail-share-btn {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+}
+
+.post-detail-share-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.post-detail-action-count {
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.post-detail-comments {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+@keyframes heart-beat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}

@@ -1,0 +1,271 @@
+.comment-section {
+  border-top: 1px solid hsl(var(--border));
+  padding-top: 1rem;
+}
+
+.comment-section-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+  color: hsl(var(--foreground));
+  margin-top: 0;
+}
+
+.comment-section-add {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.comment-section-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--primary-foreground));
+  font-weight: bold;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.comment-section-input-container {
+  flex: 1;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.comment-section-textarea {
+  flex: 1;
+  min-height: 60px;
+  resize: none;
+}
+
+.comment-section-submit-btn {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+}
+
+.comment-section-submit-btn:hover:not(:disabled) {
+  background-color: hsl(var(--primary) / 0.9);
+}
+
+.comment-section-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.comment-section-empty {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.comment-section-empty-icon {
+  width: 3rem;
+  height: 3rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0 auto 0.5rem auto;
+}
+
+.comment-section-empty-text {
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+}
+
+.comment-section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.comment-item {
+  margin-top: 1rem;
+}
+
+.comment-item.reply {
+  margin-left: 2rem;
+  margin-top: 0.5rem;
+}
+
+.comment-item-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.comment-item-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--primary-foreground));
+  font-weight: bold;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.comment-item-content {
+  flex: 1;
+}
+
+.comment-item-bubble {
+  background-color: hsl(var(--muted));
+  border-radius: 1rem;
+  padding: 0.75rem;
+}
+
+.comment-item-bubble-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comment-item-username {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  margin: 0;
+}
+
+.comment-item-more-btn {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0.125rem;
+  border-radius: 0.25rem;
+}
+
+.comment-item-more-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.comment-item-text {
+  color: hsl(var(--foreground));
+  margin: 0.25rem 0 0 0;
+}
+
+.comment-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.comment-item-like-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0.125rem;
+  border-radius: 0.25rem;
+}
+
+.comment-item-like-btn:hover {
+  color: hsl(var(--heart));
+}
+
+.comment-item-like-btn.liked {
+  color: hsl(var(--heart));
+}
+
+.comment-item-like-btn.liked svg {
+  fill: currentColor;
+}
+
+.comment-item-reply-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0.125rem;
+  border-radius: 0.25rem;
+}
+
+.comment-item-reply-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.comment-item-date {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.comment-item-reply-form {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.comment-item-reply-textarea {
+  flex: 1;
+  min-height: 60px;
+  resize: none;
+}
+
+.comment-item-reply-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.comment-item-reply-submit-btn {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+}
+
+.comment-item-reply-submit-btn:hover:not(:disabled) {
+  background-color: hsl(var(--primary) / 0.9);
+}
+
+.comment-item-reply-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.comment-item-reply-cancel-btn {
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.comment-item-reply-cancel-btn:hover {
+  background-color: hsl(var(--accent));
+}

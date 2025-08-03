@@ -18,6 +18,7 @@ import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
 import Saved from "./pages/Saved";
 import Trending from "./pages/Trending";
+import PostDetail from "./pages/PostDetail";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/trending" element={<Trending />} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/post/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth/callback" element={<AuthCallback/>} />
             <Route path="*" element={<NotFound />} />
