@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import http from 'http';
 import cors from 'cors';
 import passport from './configs/passport.config.ts';
@@ -41,6 +41,13 @@ app.get('/', (_req, res) => {
 });
 
 app.use(integrateFederation(federation, (_req) => undefined));
+
+app.use((_err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  res.status(500);
+  res.json({
+    message: 'An unexpected error has occurred.',
+  })
+});
 
 // Initialize everything
 async function startServer() {
