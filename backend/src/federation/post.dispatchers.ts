@@ -31,5 +31,5 @@ export function addPostDispatchers<T>(federation: Federation<T>) {
 
             return postToNote(ctx, post);
         },
-    )
+    );
 }
