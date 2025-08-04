@@ -44,7 +44,6 @@ export async function getRepliesCount(url: string | undefined): Promise<number |
             return null;
         }
         const data = await res.json();
-        logger.debug(`Fetched count from ${url}:`, data);
         return data?.first?.items?.length ?? null;
     } catch (err: any) {
         logger.error(`Error fetching count from ${url}:`, err);
