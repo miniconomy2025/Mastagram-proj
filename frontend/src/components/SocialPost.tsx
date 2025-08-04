@@ -105,46 +105,28 @@ export const SocialPost = ({ post }: SocialPostProps) => {
   return (
     <div className="sp-card">
       <div className="sp-header">
-        {/* <div className="sp-user-info">
-          {post.author.avatar ? (
-            <img
-              src={post.author.avatar}
-              alt={post.author.name}
-              className="sp-avatar"
-            />
-          ) : (
-            <div className="sp-avatar">{post.author.name.charAt(0).toUpperCase()}</div>
-          )}
-          <div>
-            <p className="sp-display-name">{post.author.name}</p>
-            <p className="sp-username">{post.author.handle}</p>
+        <Link
+          to={`/profile/${post.author.handle.replace('@', '')}`}
+          key={post.author.id}
+        >
+          <div className="social-post-user-info">
+            {post.author.avatar ? (
+              <img
+                src={post.author.avatar}
+                alt={post.author.name}
+                className="social-post-avatar"
+              />
+            ) : (
+              <div className="social-post-avatar">{post.author.name.charAt(0).toUpperCase()}</div>
+            )}
+            <div>
+              <p className="social-post-username">{post.author.name}</p>
+              <p className="social-post-date">
+                {new Date(post.createdAt).toLocaleDateString()}
+              </p>
+            </div>
           </div>
-        </div> */}
-        {/* <div className="sp-controls">
-          <button onClick={handleFollow} className={`sp-follow-btn ${userFollowing ? 'active' : ''}`}>
-            {userFollowing ? <UserMinus /> : <UserPlus />}
-            {userFollowing ? 'Following' : 'Follow'}
-          </button>
-          <button className="sp-icon-btn"><MoreHorizontal /></button>
-        </div> */}
-
-        <div className="social-post-user-info">
-          {post.author.avatar ? (
-            <img
-              src={post.author.avatar}
-              alt={post.author.name}
-              className="social-post-avatar"
-            />
-          ) : (
-            <div className="social-post-avatar">{post.author.name.charAt(0).toUpperCase()}</div>
-          )}
-          <div>
-            <p className="social-post-username">{post.author.name}</p>
-            <p className="social-post-date">
-              {new Date(post.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
+        </Link>
 
 
         <div className="social-post-header-actions">
@@ -213,5 +195,5 @@ export function extractHashtags(content: string): string[] {
   const textTags = Array.from(textContent.matchAll(/#(\w+)/g))
     .map(match => match[1]);
 
-  return [...new Set(textTags)]; 
+  return [...new Set(textTags)];
 }

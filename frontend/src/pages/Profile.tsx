@@ -49,6 +49,9 @@ interface UserListResponse {
   next?: string;
 }
 
+type TabValue = 'posts' | 'liked' | 'saved';
+type ListTab = 'followers' | 'following';
+
 const useUserProfile = (handle: string | undefined) => {
   return useApiQuery<UserProfileResponse>(
     ['userProfile', handle],
@@ -58,10 +61,12 @@ const useUserProfile = (handle: string | undefined) => {
 };
 
 const useUserPosts = (handle: string | undefined) => {
-  return useApiQuery<FederatedPost>(
+  return useApiQuery<{ items: FederatedPost[]; count: number }>(
     ['userPosts', handle],
     handle ? `/federation/users/${handle}/posts` : '',
-    { enabled: !!handle }
+    {
+      enabled: !!handle,
+    }
   );
 };
 
@@ -79,24 +84,15 @@ const usePaginatedConnections = (
 
     try {
       setLoading(true);
-      let endpoint: string;
+      const endpoint = url
+        ? `/federation/users/${handle}/${type}?page=${encodeURIComponent(url)}`
+        : `/federation/users/${handle}/${type}`;
 
-      if (url) {
-        endpoint = `/federation/users/${handle}/${type}?page=${encodeURIComponent(url)}`;
-      } else {
-        endpoint = `/federation/users/${handle}/${type}`;
-      }
+      const { items, next } = await api.get<UserListResponse>(endpoint);
 
-      const res = await api.get<UserListResponse>(endpoint);
-
-      if (!url) {
-        setList(res.items);
-      } else {
-        setList(prev => [...prev, ...res.items]);
-      }
-
-      setNextUrl(res.next ?? null);
-      setHasMore(!!res.next);
+      setList(prev => url ? [...prev, ...items] : items);
+      setNextUrl(next ?? null);
+      setHasMore(!!next);
     } catch (error) {
       console.error('Error fetching connections:', error);
     } finally {
@@ -117,28 +113,11 @@ const usePaginatedConnections = (
     fetchList();
   }, [handle]);
 
-  return {
-    list,
-    loading,
-    hasMore,
-    loadMore,
-  };
+  return { list, loading, hasMore, loadMore };
 };
 
-type TabValue = 'posts' | 'liked' | 'saved';
-type ListTab = 'followers' | 'following';
-
-const Profile = () => {
+const useProfileData = () => {
   const { username: routeUsername } = useParams<{ username?: string }>();
-  const [activeTab, setActiveTab] = useState<TabValue>('posts');
-  const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
-  const [showConnections, setShowConnections] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const connectionsContainerRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver>();
-
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [isLoadingApiUser, setIsLoadingApiUser] = useState(true);
   const [errorApiUser, setErrorApiUser] = useState<Error | null>(null);
@@ -151,10 +130,7 @@ const Profile = () => {
         setApiUser(profileData);
       } catch (err) {
         setErrorApiUser(err as Error);
-        if ((err as any).status === 401) {
-          auth.logout();
-          return;
-        }
+        if ((err as any).status === 401) auth.logout();
       } finally {
         setIsLoadingApiUser(false);
       }
@@ -163,24 +139,44 @@ const Profile = () => {
   }, []);
 
   const isViewingOwnProfile = !routeUsername;
-  let federatedHandle;
-  if (isViewingOwnProfile) {
-    const localUsername = apiUser?.email?.split('@')[0];
-    federatedHandle = localUsername ? `@${localUsername}@mastodon.social` : undefined;
-  } else {
-    federatedHandle = `@${routeUsername}`;
-  }
+  const federatedHandle = isViewingOwnProfile
+    ? apiUser?.email ? `@${apiUser.email.split('@')[0]}@mastodon.social` : undefined
+    : `@${routeUsername}`;
+
+  return {
+    apiUser,
+    isLoadingApiUser,
+    errorApiUser,
+    isViewingOwnProfile,
+    federatedHandle
+  };
+};
+
+const Profile = () => {
+  const {
+    apiUser,
+    isLoadingApiUser,
+    errorApiUser,
+    isViewingOwnProfile,
+    federatedHandle
+  } = useProfileData();
+
+  const [activeTab, setActiveTab] = useState<TabValue>('posts');
+  const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
+  const [showConnections, setShowConnections] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver>();
 
   const federatedProfileQuery = useUserProfile(federatedHandle);
   const userPostsQuery = useUserPosts(federatedHandle);
-
   const {
     list: followers,
     loading: isFollowersLoading,
     hasMore: hasMoreFollowers,
     loadMore: loadMoreFollowers
   } = usePaginatedConnections(federatedHandle, 'followers');
-
   const {
     list: following,
     loading: isFollowingLoading,
@@ -188,14 +184,13 @@ const Profile = () => {
     loadMore: loadMoreFollowing
   } = usePaginatedConnections(federatedHandle, 'following');
 
-  const userPosts: FederatedPost[] = userPostsQuery.data?.items ?? [];
-
+  const userPosts = userPostsQuery.data?.items ?? [];
   const userData = {
     id: federatedProfileQuery.data?.id || '1',
     username: federatedProfileQuery.data?.handle || '',
     display_name: federatedProfileQuery.data?.name || '',
-    bio: parse(DOMPurify.sanitize(federatedProfileQuery.data?.bio ))|| '',
-    avatar_url: federatedProfileQuery.data?.avatarUrl ,
+    bio: parse(DOMPurify.sanitize(federatedProfileQuery.data?.bio || '')) || '',
+    avatar_url: federatedProfileQuery.data?.avatarUrl,
     following: federatedProfileQuery.data?.following ?? 0,
     followers: federatedProfileQuery.data?.followers ?? 0,
     posts_count: userPostsQuery.data?.count ?? 0,
@@ -206,64 +201,40 @@ const Profile = () => {
     id: user.id,
     username: user.handle,
     display_name: user.name,
-    avatar_url: user?.avatar	|| `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
+    avatar_url: user?.avatar || `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
   }));
-
-  const isConnectionsLoading = connectionsTab === 'followers' ? isFollowersLoading : isFollowingLoading;
-  const hasMoreConnections = connectionsTab === 'followers' ? hasMoreFollowers : hasMoreFollowing;
-  const loadMoreConnections = connectionsTab === 'followers' ? loadMoreFollowers : loadMoreFollowing;
 
   const filteredList = mappedList.filter(user =>
     user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const isConnectionsLoading = connectionsTab === 'followers'
+    ? isFollowersLoading
+    : isFollowingLoading;
+  const hasMoreConnections = connectionsTab === 'followers'
+    ? hasMoreFollowers
+    : hasMoreFollowing;
+  const loadMoreConnections = connectionsTab === 'followers'
+    ? loadMoreFollowers
+    : loadMoreFollowing;
+
   useEffect(() => {
     if (!showConnections || !hasMoreConnections || isConnectionsLoading) return;
 
-    const options = {
-      root: null,
-      rootMargin: '100px',
-      threshold: 0.1,
-    };
+    const observer = new IntersectionObserver(
+      ([entry]) => entry.isIntersecting && loadMoreConnections(),
+      { root: null, rootMargin: '100px', threshold: 0.1 }
+    );
 
-    const handleObserver = (entries: IntersectionObserverEntry[]) => {
-      const [entry] = entries;
-      if (entry.isIntersecting) {
-        loadMoreConnections();
-      }
-    };
+    if (sentinelRef.current) observer.observe(sentinelRef.current);
 
-    observerRef.current = new IntersectionObserver(handleObserver, options);
-
-    if (sentinelRef.current) {
-      observerRef.current.observe(sentinelRef.current);
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
+    return () => observer.disconnect();
   }, [showConnections, connectionsTab, isConnectionsLoading, hasMoreConnections, loadMoreConnections]);
 
-  const isProfileDataLoading = isLoadingApiUser || federatedProfileQuery.isLoading || userPostsQuery.isLoading;
+  const showSkeleton = isLoadingApiUser || federatedProfileQuery.isLoading;
+  const showProfileError = errorApiUser || federatedProfileQuery.isError;
 
-  if (isProfileDataLoading) {
-    return (
-      <div className="skeleton-container">
-        <div className="skeleton-avatar"></div>
-        <div className="skeleton-name"></div>
-        <div className="skeleton-bio"></div>
-        <div className="skeleton-posts">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="skeleton-post-item"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (errorApiUser || federatedProfileQuery.isError || userPostsQuery.isError) {
+  if (showProfileError) {
     return <div className="empty-state">Failed to load profile.</div>;
   }
 
@@ -273,218 +244,241 @@ const Profile = () => {
         <div className="header-content">
           {showConnections ? (
             <button onClick={() => setShowConnections(false)} className="back-button">
-              <ChevronLeft style={{ width: '1.5rem', height: '1.5rem' }} />
+              <ChevronLeft size={24} />
               <span>Back</span>
             </button>
           ) : isViewingOwnProfile ? (
             <Link to="/">
-              <ArrowLeft style={{ width: '1.5rem', height: '1.5rem', color: 'hsl(var(--foreground))' }} />
+              <ArrowLeft size={24} className="text-foreground" />
             </Link>
           ) : (
-            <Link to="/profile">
-              <ChevronLeft style={{ width: '1.5rem', height: '1.5rem' }} />
-              <span>My Profile</span>
+            <Link to="/profile" className="flex items-center gap-1">
+              <ChevronLeft size={24} />
             </Link>
           )}
           <h1 className="header-title">{userData.username}</h1>
           <Link to="/settings">
-            <Settings style={{ width: '1.5rem', height: '1.5rem', color: 'hsl(var(--foreground))' }} />
+            <Settings size={24} className="text-foreground" />
           </Link>
         </div>
       </header>
 
-      <main className="main-content">
-        {showConnections ? (
-          <div className="connections-tabs">
-            <div className="connections-tabs-list">
-              <button
-                className={`connections-tabs-trigger ${connectionsTab === 'followers' ? 'active' : ''}`}
-                onClick={() => setConnectionsTab('followers')}
-              >
-                Followers
-              </button>
-              <button
-                className={`connections-tabs-trigger ${connectionsTab === 'following' ? 'active' : ''}`}
-                onClick={() => setConnectionsTab('following')}
-              >
-                Following
-              </button>
-            </div>
-
-            <div className="search-input-wrapper">
-              <input
-                type="text"
-                placeholder="Search users"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
-              />
-            </div>
-
-            <ul className="user-list">
-              {filteredList.length > 0 ? (
-                filteredList.map(user => (
-                  <Link
-                    to={`/profile/${user.username.replace('@', '')}`}
-                    key={user.id}
-                    className="user-list-link"
-                    onClick={() => {
-                      setShowConnections(false);
-                    }}
-                  >
-                    <li className="user-list-item">
-                      <img src={user.avatar_url} alt={user.display_name} className="user-list-avatar" />
-                      <div className="user-list-info">
-                        <p className="user-list-name">{user.display_name}</p>
-                        <p className="user-list-handle">{user.username}</p>
-                      </div>
-                    </li>
-                  </Link>
-                ))
-              ) : (
-                !isConnectionsLoading && <p className="empty-state">No users found.</p>
-              )}
-            </ul>
-
-            <div ref={sentinelRef} style={{ height: '1px', width: '100%' }} />
-
-            {isConnectionsLoading && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                padding: '20px',
-                minHeight: '60px'
-              }}>
-                <Loader2 style={{
-                  width: '24px',
-                  height: '24px',
-                  animation: 'spin 1s linear infinite'
-                }} />
-              </div>
-            )}
-
-            {!hasMoreConnections && mappedList.length > 0 && (
-              <div style={{
-                textAlign: 'center',
-                padding: '20px',
-                color: '#666'
-              }}>
-                No more users to show
-              </div>
-            )}
+      {showSkeleton ? (
+        <div className="skeleton-container">
+          <div className="skeleton-avatar"></div>
+          <div className="skeleton-name"></div>
+          <div className="skeleton-bio"></div>
+          <div className="skeleton-posts">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="skeleton-post-item"></div>
+            ))}
           </div>
-        ) : (
-          <>
-            <section className="profile-section">
-              <div className="profile-header">
-                <div className="avatar-wrapper">
-                {userData.avatar_url ? (
-                  <img
-                    src={userData.avatar_url}
-                    alt={userData.display_name}
-                    className="profile-post-avatar"
-                  />
+        </div>
+      ) : (
+        <main className="main-content">
+          {showConnections ? (
+            <div className="connections-tabs">
+              <div className="connections-tabs-list">
+                <button
+                  className={`connections-tabs-trigger ${connectionsTab === 'followers' ? 'active' : ''}`}
+                  onClick={() => setConnectionsTab('followers')}
+                >
+                  Followers
+                </button>
+                <button
+                  className={`connections-tabs-trigger ${connectionsTab === 'following' ? 'active' : ''}`}
+                  onClick={() => setConnectionsTab('following')}
+                >
+                  Following
+                </button>
+              </div>
+
+              <div className="search-input-wrapper">
+                <input
+                  type="text"
+                  placeholder="Search users"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+
+              <ul className="user-list">
+                {filteredList.length > 0 ? (
+                  filteredList.map(user => (
+                    <Link
+                      to={`/profile/${user.username.replace('@', '')}`}
+                      key={user.id}
+                      className="user-list-link"
+                      onClick={() => setShowConnections(false)}
+                    >
+                      <li className="user-list-item">
+                        <img
+                          src={user.avatar_url}
+                          alt={user.display_name}
+                          className="user-list-avatar"
+                        />
+                        <div className="user-list-info">
+                          <p className="user-list-name">{user.display_name}</p>
+                          <p className="user-list-handle">{user.username}</p>
+                        </div>
+                      </li>
+                    </Link>
+                  ))
                 ) : (
-                  <div className="profile-post-avatar">{userData.display_name.charAt(0).toUpperCase()}</div>
+                  !isConnectionsLoading && <p className="empty-state">No users found.</p>
                 )}
-                  <button aria-label="Change avatar" className="change-avatar-button">
-                    <Camera style={{ width: '1rem', height: '1rem', color: 'white' }} />
+              </ul>
+
+              <div ref={sentinelRef} className="sentinel" />
+
+              {isConnectionsLoading && (
+                <div className="loading-indicator">
+                  <Loader2 className="animate-spin" size={24} />
+                </div>
+              )}
+
+              {!hasMoreConnections && mappedList.length > 0 && (
+                <div className="end-of-list">
+                  No more users to show
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <section className="profile-section">
+                <div className="profile-header">
+                  <div className="avatar-wrapper">
+                    {userData.avatar_url ? (
+                      <img
+                        src={userData.avatar_url}
+                        alt={userData.display_name}
+                        className="profile-post-avatar"
+                      />
+                    ) : (
+                      <div className="profile-post-avatar">
+                        {userData.display_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <button aria-label="Change avatar" className="change-avatar-button">
+                      <Camera size={16} className="text-white" />
+                    </button>
+                  </div>
+                  <div className="profile-stats">
+                    <div className="stats-list">
+                      <div className="stat-item">
+                        <div className="stat-value">{userData.posts_count}</div>
+                        <div className="stat-label">Posts</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setConnectionsTab('followers');
+                          setShowConnections(true);
+                        }}
+                        className="stat-item"
+                      >
+                        <div className="stat-value">{userData.followers}</div>
+                        <div className="stat-label">Followers</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setConnectionsTab('following');
+                          setShowConnections(true);
+                        }}
+                        className="stat-item"
+                      >
+                        <div className="stat-value">{userData.following}</div>
+                        <div className="stat-label">Following</div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="profile-info">
+                  <h2>{userData.display_name}</h2>
+                  {userData.bio}
+                </div>
+              </section>
+
+              <div className="tabs-container">
+                <div className="tabs-list">
+                  <button
+                    className={`tab-trigger ${activeTab === 'posts' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('posts')}
+                  >
+                    <Grid3X3 size={16} /> Posts
+                  </button>
+                  <button
+                    className={`tab-trigger ${activeTab === 'liked' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('liked')}
+                  >
+                    <Heart size={16} /> Liked
+                  </button>
+                  <button
+                    className={`tab-trigger ${activeTab === 'saved' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('saved')}
+                  >
+                    <Bookmark size={16} /> Saved
                   </button>
                 </div>
-                <div className="profile-stats">
-                  <div className="stats-list">
-                    <div className="stat-item">
-                      <div className="stat-value">{userData.posts_count}</div>
-                      <div className="stat-label">Posts</div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setConnectionsTab('followers');
-                        setShowConnections(true);
-                      }}
-                      className="stat-item"
-                    >
-                      <div className="stat-value">{userData.followers}</div>
-                      <div className="stat-label">Followers</div>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setConnectionsTab('following');
-                        setShowConnections(true);
-                      }}
-                      className="stat-item"
-                    >
-                      <div className="stat-value">{userData.following}</div>
-                      <div className="stat-label">Following</div>
-                    </button>
+
+                {activeTab === 'posts' && (
+                  <div className="tabs-content">
+                    {userPostsQuery.isLoading ? (
+                      <div className="loading-indicator">
+                        <Loader2 className="loading-spinner" />
+                        <p className="loading-text">Loading your feed...</p>
+                      </div>
+
+                    ) : userPostsQuery.isError ? (
+                      <div className="error-container">
+                        <p className="error-message">Couldn't load posts</p>
+                        <button
+                          className="retry-button"
+                          onClick={() => userPostsQuery.refetch()}
+                          disabled={userPostsQuery.isLoading}
+                        >
+                          {userPostsQuery.isLoading && (
+                            <Loader2 className="spinner" />
+                          )}
+                          Retry
+                        </button>
+                      </div>
+
+                    ) : userData.posts_count > 0 ? (
+                      userPosts
+                        .filter(Boolean)
+                        .map(post => <SocialPost key={post.id} post={post} />)
+                    ) : (
+                      <div className="empty-state">
+                        <Grid3X3 className="empty-icon" />
+                        <h3>No posts yet</h3>
+                        <p>This user has not posted anything.</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
+                )}
 
-              <div className="profile-info">
-                <h2>{userData.display_name}</h2>
-                <p>{userData.bio}</p>
-              </div>
-            </section>
-
-            <div className="tabs-container">
-              <div className="tabs-list">
-                <button
-                  className={`tab-trigger ${activeTab === 'posts' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('posts')}
-                >
-                  <Grid3X3 style={{ width: '1rem', height: '1rem' }} /> Posts
-                </button>
-                <button
-                  className={`tab-trigger ${activeTab === 'liked' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('liked')}
-                >
-                  <Heart style={{ width: '1rem', height: '1rem' }} /> Liked
-                </button>
-                <button
-                  className={`tab-trigger ${activeTab === 'saved' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('saved')}
-                >
-                  <Bookmark style={{ width: '1rem', height: '1rem' }} /> Saved
-                </button>
-              </div>
-
-              {activeTab === 'posts' && (
-                <div className="tabs-content">
-                {userData.posts_count? (
-                  userPosts
-                    .filter(post => post !== null) 
-                    .map(post => (
-                      <SocialPost key={post.id} post={post} />
-                    ))
-                ) : (
+                {activeTab === 'liked' && (
                   <div className="empty-state">
-                    <h3>No posts yet</h3>
-                    <p>This user has not posted anything.</p>
+                    <Heart className="empty-icon" />
+                    <h3>No liked posts yet</h3>
+                    <p>Posts you like will appear here</p>
+                  </div>
+                )}
+
+                {activeTab === 'saved' && (
+                  <div className="empty-state">
+                    <Bookmark className="empty-icon" />
+                    <h3>No saved posts yet</h3>
+                    <p>Save posts to view them later</p>
                   </div>
                 )}
               </div>
-              
-              )}
-              {activeTab === 'liked' && (
-                <div className="empty-state">
-                  <Heart className="empty-icon" />
-                  <h3>No liked posts yet</h3>
-                  <p>Posts you like will appear here</p>
-                </div>
-              )}
-              {activeTab === 'saved' && (
-                <div className="empty-state">
-                  <Bookmark className="empty-icon" />
-                  <h3>No saved posts yet</h3>
-                  <p>Save posts to view them later</p>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </main>
+            </>
+          )}
+        </main>
+      )}
     </div>
   );
 };
