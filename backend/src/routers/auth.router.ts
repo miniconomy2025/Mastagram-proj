@@ -19,10 +19,10 @@ const authRouter = Router();
  *         description: Already authenticated
  */
 authRouter.get('/session', ensureGuest, passport.authenticate('google', {
-  scope: ['profile', 'email'],
+  scope: ['openid', 'profile', 'email'],
   session: false,
-  accessType: 'offline',
-  prompt: 'consent'
+  accessType: 'offline', 
+  prompt: 'consent' 
 }));
 
 /**
@@ -38,8 +38,8 @@ authRouter.get('/session', ensureGuest, passport.authenticate('google', {
  *         description: Redirect to frontend with tokens or error
  */
 authRouter.get('/tokens',
-  passport.authenticate('google', { 
-    session: false, 
+  passport.authenticate('google', {
+    session: false,
     failureRedirect: `${process.env.FRONTEND_URL}/login?error=oauth_failed`
   }),
   AuthController.googleCallback
@@ -92,13 +92,13 @@ authRouter.get('/failure', AuthController.authFailure);
 // Global error handler for authentication routes
 authRouter.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   console.error('Authentication error:', err);
-  
+
   // For OAuth flow errors, redirect to frontend with error
   if (req.path.includes('/tokens') || req.path.includes('/session')) {
     const errorUrl = `${process.env.FRONTEND_URL}/login?error=server_error`;
     return res.redirect(errorUrl);
   }
-  
+
   // For API endpoints, return JSON error
   res.status(500).json({
     error: 'Internal server error',

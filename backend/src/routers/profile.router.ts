@@ -55,17 +55,7 @@ const profileRouter = Router();
 profileRouter.get(
   '/',
   ensureAuthenticated,
-  (req: Request, res: Response<ProfileResponse | { error: string }>) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    const profile: ProfileResponse = {
-      ...req.user
-    };
-
-    return res.status(200).json(profile);
-  }
+  ProfileController.getProfile()
 );
 
 /**

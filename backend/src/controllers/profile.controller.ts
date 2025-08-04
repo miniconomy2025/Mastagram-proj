@@ -98,23 +98,30 @@ export class ProfileController {
           // 1. Try to get data from Redis cache
           const cachedProfile = await redisClient.get(`profile:${username}`);
           if (cachedProfile) {
-              return res.status(200).json(JSON.parse(cachedProfile));
+            return res.status(200).json(JSON.parse(cachedProfile));
           }
 
           // 2. If not in cache, fetch from MongoDB
           const user = await findUserByUsername(username);
 
           if (!user) {
-              return res.status(404).json({ message: 'User not found' });
+              return res.status(404).json({ error: 'User not found' });
           }
 
           // 3. Cache the result for next time
           await redisClient.set(`profile:${username}`, JSON.stringify(user), 'EX', PROFILE_CACHE_TTL);
 
-          return res.status(200).json(user);
+          // 4. Return consistent response format
+          return res.status(200).json({
+            username: user.username,
+            email: user.email,
+            displayName: user.name,
+            avatarUrl: user.avatarUrl,
+            bio: user.bio
+          });
       } catch (error) {
           console.error('Error fetching user profile:', error);
-          return res.status(500).json({ message: 'Failed to fetch user profile' });
+          return res.status(500).json({ error: 'Failed to fetch user profile' });
       }
   };
 }
