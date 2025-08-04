@@ -40,6 +40,7 @@ interface UserListItem {
   id: string;
   handle: string;
   name: string;
+  avatar?: string;
 }
 
 interface UserListResponse {
@@ -205,7 +206,7 @@ const Profile = () => {
     id: user.id,
     username: user.handle,
     display_name: user.name,
-    avatar_url: `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
+    avatar_url: user?.avatar	|| `https://www.gravatar.com/avatar/${user.handle}?d=identicon`
   }));
 
   const isConnectionsLoading = connectionsTab === 'followers' ? isFollowersLoading : isFollowingLoading;
