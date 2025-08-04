@@ -14,8 +14,10 @@ const httpServer = http.createServer(app);
 setupSwaggerDocs(app);
 
 const allowedOrigins = [
-  'http://localhost:8080', 
-];
+  'http://localhost:8080',
+  'http://localhost:8081',
+  process.env.FRONTEND_URL, 
+].filter(Boolean); 
 
 app.use(cors({
   origin: (origin, callback) => {

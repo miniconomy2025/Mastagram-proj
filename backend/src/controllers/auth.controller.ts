@@ -104,7 +104,7 @@ export class AuthController {
       // This would require the user to be authenticated
       // You can implement this if you want an API endpoint to get current tokens
       const user = req.user as UserWithTokens;
-      
+
       if (!user?.currentTokens) {
         return res.status(401).json({
           error: 'Not authenticated',

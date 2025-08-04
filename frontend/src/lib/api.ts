@@ -8,19 +8,53 @@ interface RequestOptions extends RequestInit {
   skipAuth?: boolean;
 }
 
-// Token management
 const tokens = {
-  get: () => ({
-    id: localStorage.getItem('id_token'),
-    refresh: localStorage.getItem('refresh_token')
-  }),
-  set: (idToken: string, refreshToken: string) => {
-    localStorage.setItem('id_token', idToken);
-    localStorage.setItem('refresh_token', refreshToken);
+  get: () => {
+    try {
+      const id = localStorage.getItem('id_token');
+      const refresh = localStorage.getItem('refresh_token');
+      
+      // Basic validation
+      if (id && !id.includes('.')) {
+        localStorage.removeItem('id_token');
+        return { id: null, refresh };
+      }
+      
+      return { id, refresh };
+    } catch (error) {
+      // Handle localStorage access errors (private browsing, etc.)
+      console.error('Failed to access localStorage:', error);
+      return { id: null, refresh: null };
+    }
   },
+  
+  set: (idToken: string, refreshToken: string) => {
+    try {
+      // Validate tokens before storing
+      if (!idToken || !refreshToken) {
+        throw new Error('Invalid tokens provided');
+      }
+      
+      // Ensure ID token is a valid JWT format
+      if (!idToken.includes('.')) {
+        throw new Error('Invalid ID token format');
+      }
+      
+      localStorage.setItem('id_token', idToken);
+      localStorage.setItem('refresh_token', refreshToken);
+    } catch (error) {
+      console.error('Failed to store tokens:', error);
+      throw error;
+    }
+  },
+  
   clear: () => {
-    localStorage.removeItem('id_token');
-    localStorage.removeItem('refresh_token');
+    try {
+      localStorage.removeItem('id_token');
+      localStorage.removeItem('refresh_token');
+    } catch (error) {
+      console.error('Failed to clear tokens:', error);
+    }
   }
 };
 
@@ -51,12 +85,15 @@ async function refreshTokens(): Promise<boolean> {
         tokens.set(data.idToken, data.refreshToken);
         return true;
       }
-      
+
       throw new Error('Invalid response');
     } catch (error) {
-      console.error('Token refresh failed:', error);
       tokens.clear();
-      window.location.href = '/login?error=session_expired';
+
+      // Only redirect if we're not already on the login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login?error=session_expired';
+      }
       return false;
     } finally {
       refreshPromise = null;
@@ -130,29 +167,56 @@ export async function request<T = unknown>(
 export const api = {
   get: <T>(endpoint: string, options?: RequestOptions) =>
     request<T>(endpoint, 'GET', options),
-  
+
   post: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, 'POST', { ...options, body: body as BodyInit }),
-  
+
   put: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, 'PUT', { ...options, body: body as BodyInit }),
-  
+
   patch: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, 'PATCH', { ...options, body: body as BodyInit }),
-  
+
   delete: <T>(endpoint: string, options?: RequestOptions) =>
     request<T>(endpoint, 'DELETE', options)
 };
 
 export const auth = {
-  isAuthenticated: () => !!tokens.get().id,
-  
+  isAuthenticated: () => {
+    const { id } = tokens.get();
+    if (!id) return false;
+
+    try {
+      const payload = JSON.parse(atob(id.split('.')[1]));
+      const now = Math.floor(Date.now() / 1000);
+      
+      // Check if token is expired
+      if (payload.exp && payload.exp < now) {
+        tokens.clear(); // Clear expired tokens
+        return false;
+      }
+      
+      return true;
+    } catch {
+      tokens.clear(); // Clear invalid tokens
+      return false;
+    }
+  },
+
   getUser: () => {
     const { id } = tokens.get();
     if (!id) return null;
-    
+
     try {
       const payload = JSON.parse(atob(id.split('.')[1]));
+      const now = Math.floor(Date.now() / 1000);
+      
+      // Check if token is expired
+      if (payload.exp && payload.exp < now) {
+        tokens.clear();
+        return null;
+      }
+      
       return {
         id: payload.sub,
         email: payload.email,
@@ -160,10 +224,11 @@ export const auth = {
         picture: payload.picture
       };
     } catch {
+      tokens.clear();
       return null;
     }
   },
-  
+
   logout: () => {
     tokens.clear();
     window.location.href = '/login';
@@ -189,7 +254,7 @@ export function useApiQuery<T = unknown, E = Error>(
         throw error;
       }
     },
-    retry: (failureCount, error: E & { status?: number }) => 
+    retry: (failureCount, error: E & { status?: number }) =>
       error?.status === 401 || error?.status === 403 ? false : failureCount < 3,
     ...options
   });
