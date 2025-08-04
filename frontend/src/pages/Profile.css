@@ -473,3 +473,48 @@
     transform: rotate(360deg);
   }
 }
+
+/* Add to your Profile.css file */
+
+.profile-header-actions {
+  display: block;
+  /* margin-top: 0.8rem; */
+}
+
+.profile-follow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.3rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.profile-follow-btn:hover {
+  background-color: hsl(var(--primary) / 0.9);
+}
+
+.profile-follow-btn.following {
+  background-color: transparent;
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.profile-follow-btn.following:hover {
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+  border-color: hsl(var(--destructive));
+}
+
+.profile-follow-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -8,7 +8,9 @@ import {
   Heart,
   Camera,
   ChevronLeft,
-  Loader2
+  Loader2,
+  UserMinus,
+  UserPlus
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { SocialPost } from '@/components/SocialPost';
@@ -165,6 +167,7 @@ const Profile = () => {
   const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
   const [showConnections, setShowConnections] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver>();
@@ -377,7 +380,7 @@ const Profile = () => {
                         }}
                         className="stat-item"
                       >
-                        <div className="stat-value">{userData.followers}</div>
+                        <div className="stat-value">{userData.followers.toLocaleString()}</div>
                         <div className="stat-label">Followers</div>
                       </button>
                       <button
@@ -387,10 +390,21 @@ const Profile = () => {
                         }}
                         className="stat-item"
                       >
-                        <div className="stat-value">{userData.following}</div>
+                        <div className="stat-value">{userData.following.toLocaleString()}</div>
                         <div className="stat-label">Following</div>
                       </button>
                     </div>
+                    {!isViewingOwnProfile && (
+                      <div className="profile-header-actions">
+                        <button
+                          onClick={() => setIsFollowing(!isFollowing)}
+                          className={`profile-follow-btn ${isFollowing ? 'following' : ''}`}
+                        >
+                          {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                          {isFollowing ? 'Following' : 'Follow'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
