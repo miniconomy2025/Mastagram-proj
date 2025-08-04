@@ -1,9 +1,12 @@
 import { Router } from "express";
-import federation, { createContext } from "../federation/federation.ts";
+import federation, { createContext, PAGINATION_LIMIT } from "../federation/federation.ts";
 import logger from "../logger.ts";
 import { cachedLookupObject } from "../federation/lookup.ts";
 import { Collection, CollectionPage, Create, Document, Image, isActor, Link, type Actor, Note, Object, Video, type Context } from "@fedify/fedify";
 import base64url from "base64url";
+import { getFollowersAndFollowingCount, getRepliesCount } from "../utils/federation.util.ts";
+import { getFollowers, getFollowing } from "../controllers/federation.controller.ts";
+import { getCollectionItems } from "../services/federation.service.ts";
 
 const UNEXPECTED_ERROR = 'An unexpected error has occurred.';
 
@@ -23,12 +26,12 @@ type PaginatedList<T> = {
 
 async function readCollection(ctx: Context<unknown>, collection: Collection | CollectionPage): Promise<{ items: Object[], next?: URL }> {
     const first = await collection.getFirst();
-        
+
     if (first)
         return await readCollection(ctx, first);
 
     const itemsPromise = await collection.getItems();
-    
+
     const items: Object[] = [];
 
     for await (const item of itemsPromise) {
@@ -53,7 +56,7 @@ async function readCollection(ctx: Context<unknown>, collection: Collection | Co
 
 async function readCollectionIds(ctx: Context<unknown>, collection: Collection | CollectionPage): Promise<{ items: URL[], next?: URL }> {
     const first = await collection.getFirst();
-        
+
     if (first)
         return await readCollectionIds(ctx, first);
 
@@ -76,6 +79,11 @@ async function objectToUser(object: unknown): Promise<FederatedUser | null> {
     const image = await object.getImage();
     const imageUrl = normaliseLink(image?.url);
 
+    const { followersCount, followingCount } = await getFollowersAndFollowingCount(
+        object.followersId?.href ?? "",
+        object.followingId?.href ?? ""
+    );
+
     const user: FederatedUser = {
         id: object.id.href,
         handle: `@${object.preferredUsername}@${object.id.hostname}`,
@@ -83,6 +91,8 @@ async function objectToUser(object: unknown): Promise<FederatedUser | null> {
         bio: object.summary as (string | null) ?? '',
         avatarUrl: iconUrl?.href,
         splashUrl: imageUrl?.href,
+        followers: followersCount ?? 0,
+        following: followingCount ?? 0,
         createdAt: object.published?.toString(),
     };
 
@@ -101,6 +111,9 @@ async function objectToPost(object: unknown): Promise<FederatedPost | null> {
         logger.warn`malformed post attribution, ${attribution}`;
         return null;
     }
+
+    const icon = await attribution.getIcon();
+    const iconUrl = normaliseLink(icon?.url);
 
     let attachment: FederatedAttachment | undefined;
 
@@ -165,10 +178,15 @@ async function objectToPost(object: unknown): Promise<FederatedPost | null> {
     const replyTarget = await object.getReplyTarget();
     const isReplyTo = replyTarget instanceof Object ? replyTarget.id : replyTarget?.href;
 
-    let likes = undefined;
+    let likesCount = undefined;
     try {
-        likes = (await object.getLikes())?.totalItems ?? undefined;
-    } catch {}
+        likesCount = (await object.getLikes())?.totalItems ?? undefined;
+    } catch { }
+
+    let repliesCount = undefined;
+    try {
+        repliesCount = await getRepliesCount(object.repliesId?.href);
+    } catch { }
 
     const post: FederatedPost = {
         id: object.id.href,
@@ -176,18 +194,19 @@ async function objectToPost(object: unknown): Promise<FederatedPost | null> {
             id: attribution.id.href,
             handle: `@${attribution.preferredUsername}@${attribution.id.hostname}`,
             name: attribution.name as (string | null) ?? (attribution.preferredUsername as string),
+            avatar: iconUrl?.href,
         },
         content: object.content as string,
         contentMediaType: normaliseMediaType(object.mediaType),
         attachment,
-        likes,
+        likesCount,
+        repliesCount,
         isReplyTo: isReplyTo?.href,
         createdAt: object.published?.toString(),
     };
 
     return post;
 }
-import { fetchCollectionItems, getFollowersAndFollowingCount } from "../utils/fetch.util.ts";
 
 const federationRouter = Router();
 
@@ -198,6 +217,8 @@ type FederatedUser = {
     bio: string,
     avatarUrl?: string,
     splashUrl?: string,
+    followers: number;
+    following: number;
     // iso 8601 date time
     createdAt?: string,
 };
@@ -219,96 +240,6 @@ federationRouter.get('/users/:userId', async (req, res) => {
     }
 
     res.json(user);
-});
-
-
-// New endpoint to get followers list
-federationRouter.get('/users/:userId/followers', async (req, res) => {
-    try {
-        const userId = req.params.userId;
-        const page = req.query.page?.toString() || undefined;
-        logger.info(`Fetching followers for ${userId}`);
-
-        const ctx = createContext(federation, req);
-        const object = await cachedLookupObject(ctx, userId);
-
-        if (!object || !isActor(object) || !object.followersId) {
-            return res.status(404).json({ error: "User or followers collection not found" });
-        }
-
-        const collection = await cachedLookupObject(ctx, object.followersId.href) as Collection;
-
-        logger.info`fetched followers collection: ${JSON.stringify(await collection.toJsonLd())}`;
-        const { items, total, next } = await fetchCollectionItems(
-            ctx,
-            collection,
-            page,
-            async (item) => {
-                console.debug`processing item is user?: ${isActor(item)}`;
-                if (!isActor(item) || !item.id) return null;
-                return {
-                    id: item.id.href,
-                    handle: `@${item.preferredUsername}@${new URL(item.id.href).hostname}`,
-                    name: item.name ?? item.preferredUsername,
-                    // avatar: typeof item.icon === 'string' ? item.icon : item.icon?.url ?? null
-                };
-            }
-        );
-
-        const response: PaginatedResponse<FederatedUserList> = {
-            items: items.filter(Boolean) as FederatedUserList[],
-            total,
-            next
-        };
-
-        return res.json(response);
-    } catch (error) {
-        logger.error(`Error fetching followers: ${error}`);
-        return res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-// New endpoint to get following list
-federationRouter.get('/users/:userId/following', async (req, res) => {
-    try {
-        const userId = req.params.userId;
-        const page = req.query.page?.toString() || undefined;
-        logger.info(`Fetching following for ${userId}`);
-
-        const ctx = createContext(federation, req);
-        const object = await cachedLookupObject(ctx, userId);
-
-        if (!object || !isActor(object) || !object.followingId) {
-            return res.status(404).json({ error: "User or following collection not found" });
-        }
-
-        const collection = await cachedLookupObject(ctx, object.followingId.href ?? "") as Collection;
-        const { items, total, next } = await fetchCollectionItems(
-            ctx,
-            collection,
-            page,
-            async (item) => {
-                if (!isActor(item) || !item.id) return null;
-                return {
-                    id: item.id.href,
-                    handle: `@${item.preferredUsername}@${new URL(item.id.href).hostname}`,
-                    name: item.name ?? item.preferredUsername,
-                    // avatar: typeof item.icon === 'string' ? item.icon : item.icon?.url ?? null
-                };
-            }
-        );
-
-        const response: PaginatedResponse<FederatedUserList> = {
-            items: items.filter(Boolean) as FederatedUserList[],
-            total,
-            next
-        };
-
-        return res.json(response);
-    } catch (error) {
-        logger.error(`Error fetching following: ${error}`);
-        return res.status(500).json({ error: "Internal server error" });
-    }
 });
 
 federationRouter.get('/users/:userId/posts', async (req, res) => {
@@ -338,7 +269,7 @@ federationRouter.get('/users/:userId/posts', async (req, res) => {
             if (outboxObject instanceof Collection) {
                 outbox = outboxObject;
             }
-        } catch {}
+        } catch { }
     } else {
         outbox = await userObject.getOutbox();
     }
@@ -369,142 +300,8 @@ federationRouter.get('/users/:userId/posts', async (req, res) => {
 
     const response: PaginatedList<FederatedPost> = {
         items,
-        next: `/api/federation/users/${encodeURIComponent(req.params.userId)}/posts?cursor=${nextCursor}`,
+        next: nextCursor ? `/api/federation/users/${encodeURIComponent(req.params.userId)}/posts?cursor=${nextCursor}` : undefined,
         count: outbox.totalItems ?? undefined,
-    };
-    res.json(response);
-});
-
-federationRouter.get('/users/:userId/followers', async (req, res) => {
-    const userId = req.params.userId;
-    logger.info`fetching user ${userId} followers`;
-
-    const ctx = createContext(federation, req);
-    const userObject = await cachedLookupObject(ctx, userId);
-
-    if (!isActor(userObject)) {
-        res.status(404);
-        res.json({
-            message: 'User not found.',
-        });
-        return;
-    }
-
-    let followers: Collection | null = null;
-
-    if (req.query.cursor && typeof req.query.cursor === 'string') {
-        try {
-            logger.debug`cursor is specified`;
-            const cursor = req.query.cursor;
-            const cursorId = base64url.default.decode(cursor);
-            logger.debug`cursor decoded as ${cursorId}`;
-            const followersObject = await cachedLookupObject(ctx, cursorId);
-
-            if (followersObject instanceof Collection) {
-                followers = followersObject;
-            }
-        } catch {}
-    } else {
-        followers = await userObject.getFollowers();
-    }
-
-    if (!followers) {
-        logger.error`user has no followers collection`;
-        res.status(500);
-        res.json({
-            message: UNEXPECTED_ERROR,
-        });
-        return;
-    }
-
-    let followerItems;
-    
-    try {
-        followerItems = await readCollectionIds(ctx, followers)
-    } catch (error) {
-        logger.error`error reading followers collection: ${error}`;
-        res.status(500);
-        res.json({
-            message: UNEXPECTED_ERROR,
-        });
-        return;
-    }
-
-    const nextCursor = followerItems.next
-        ? base64url.default.encode(followerItems.next.href)
-        : undefined;
-
-    const response: PaginatedList<string> = {
-        items: followerItems.items.map(item => item.href),
-        next: `/api/federation/users/${encodeURIComponent(userId)}/followers?cursor=${nextCursor}`,
-        count: followers.totalItems ?? undefined,
-    };
-    res.json(response);
-});
-
-federationRouter.get('/users/:userId/following', async (req, res) => {
-    const userId = req.params.userId;
-    logger.info`fetching user ${userId} following`;
-
-    const ctx = createContext(federation, req);
-    const userObject = await cachedLookupObject(ctx, userId);
-
-    if (!isActor(userObject)) {
-        res.status(404);
-        res.json({
-            message: 'User not found.',
-        });
-        return;
-    }
-
-    let following: Collection | null = null;
-
-    if (req.query.cursor && typeof req.query.cursor === 'string') {
-        try {
-            logger.debug`cursor is specified`;
-            const cursor = req.query.cursor;
-            const cursorId = base64url.default.decode(cursor);
-            logger.debug`cursor decoded as ${cursorId}`;
-            const followersObject = await cachedLookupObject(ctx, cursorId);
-
-            if (followersObject instanceof Collection) {
-                following = followersObject;
-            }
-        } catch {}
-    } else {
-        following = await userObject.getFollowing();
-    }
-
-    if (!following) {
-        logger.error`user has no followers collection`;
-        res.status(500);
-        res.json({
-            message: UNEXPECTED_ERROR,
-        });
-        return;
-    }
-
-    let followingItems;
-    
-    try {
-        followingItems = await readCollectionIds(ctx, following)
-    } catch (error) {
-        logger.error`error reading following collection: ${error}`;
-        res.status(500);
-        res.json({
-            message: UNEXPECTED_ERROR,
-        });
-        return;
-    }
-
-    const nextCursor = followingItems.next
-        ? base64url.default.encode(followingItems.next.href)
-        : undefined;
-
-    const response: PaginatedList<string> = {
-        items: followingItems.items.map(item => item.href),
-        next: nextCursor && `/api/federation/users/${encodeURIComponent(userId)}/following?cursor=${nextCursor}`,
-        count: following.totalItems ?? undefined,
     };
     res.json(response);
 });
@@ -537,7 +334,7 @@ federationRouter.get('/users/:userId/likes', async (req, res) => {
             if (likesObject instanceof Collection) {
                 likes = likesObject;
             }
-        } catch {}
+        } catch { }
     } else {
         likes = await userObject.getLiked();
     }
@@ -552,7 +349,7 @@ federationRouter.get('/users/:userId/likes', async (req, res) => {
     }
 
     let likedItems;
-    
+
     try {
         likedItems = await readCollectionIds(ctx, likes)
     } catch (error) {
@@ -596,11 +393,13 @@ type FederatedPost = {
         id: string,
         handle: string,
         name: string,
+        avatar?: string,
     },
     content: string,
     contentMediaType: SupportedMediaType,
     attachment?: FederatedAttachment,
-    likes?: number,
+    likesCount?: number,
+    repliesCount?: number | unknown,
     // if this post is in reply to another post, this is its id
     isReplyTo?: string,
     // iso 8601 datetime
@@ -659,7 +458,7 @@ federationRouter.get('/posts/:postId/replies', async (req, res) => {
             if (outboxObject instanceof Collection) {
                 replies = outboxObject;
             }
-        } catch {}
+        } catch { }
     } else {
         replies = await postObject.getReplies();
     }
@@ -700,5 +499,111 @@ federationRouter.get('/posts/:postId/replies', async (req, res) => {
 
     res.json(replyPosts);
 });
+
+// Add this to your federationRouter.ts
+federationRouter.get('/me/following/posts', async (req, res) => {
+    try {
+        const ctx = createContext(federation, req);
+        const cursor = req.query.cursor?.toString();
+        const limit = parseInt(req.query.limit?.toString() || PAGINATION_LIMIT.toString());
+
+        // 1. Get the authenticated user's actor
+        const actorUri = await cachedLookupObject(ctx, '@Third3King@mastodon.social');
+        if (!actorUri) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        // const currentUser = await cachedLookupObject(ctx, actorUri);
+        if (!actorUri || !isActor(actorUri)) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // 2. Get the user's following collection
+        const followingCollection = await cachedLookupObject(ctx, actorUri.followingId?.href ?? "") as Collection;
+        if (!followingCollection) {
+            return res.status(404).json({ error: "Following collection not found" });
+        }
+
+        // 3. Fetch all followed users
+        const { items: following } = await getCollectionItems(
+            ctx,
+            followingCollection,
+            cursor,
+            async (item) => {
+                if (!isActor(item)) return null;
+                return item;
+            }
+        );
+
+        // 4. Fetch posts from each followed user's outbox
+        const allPosts: FederatedPost[] = [];
+        const postPromises = following.map(async (followedUser) => {
+            if (!followedUser) return;
+
+            if (!isActor(followedUser) || !followedUser.id) {
+                logger.warn(`Invalid followed user: ${followedUser}`);
+                return;
+            }
+            try {
+                const outbox = await followedUser.getOutbox();
+                if (!outbox) return;
+
+                const { items: outboxItems } = await readCollection(ctx, outbox);
+                const createActivities = outboxItems.filter(item => item instanceof Create);
+
+                for (const activity of createActivities) {
+                    try {
+                        const object = await activity.getObject();
+                        if (!object || !(object instanceof Note)) continue;
+                        
+                        const post = await objectToPost(object);
+                        if (post) allPosts.push(post);
+                    } catch (error) {
+                        logger.warn(`Failed to process post: ${error}`);
+                    }
+                }
+            } catch (error) {
+                logger.warn(`Failed to fetch outbox for ${followedUser.id}: ${error}`);
+            }
+        });
+
+        await Promise.all(postPromises);
+
+        // 5. Sort posts by date (newest first)
+        allPosts.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateB - dateA;
+        });
+
+        // 6. Apply pagination
+        const paginatedPosts = cursor 
+            ? allPosts.slice(parseInt(cursor), parseInt(cursor) + limit)
+            : allPosts.slice(0, limit);
+
+        // 7. Prepare response
+        const nextCursor = allPosts.length > parseInt(cursor || '0') + limit 
+            ? (parseInt(cursor || '0') + limit).toString() 
+            : undefined;
+
+        const response: PaginatedList<FederatedPost> = {
+            items: paginatedPosts,
+            next: nextCursor ? `/api/federation/me/following/posts?cursor=${nextCursor}&limit=${limit}` : undefined,
+            count: allPosts.length,
+        };
+
+        return res.json(response);
+
+    } catch (error) {
+        logger.error(`Error fetching following posts: ${error}`);
+        return res.status(500).json({ error: "Failed to fetch following posts" });
+    }
+});
+
+
+
+federationRouter.get('/users/:userId/followers', getFollowers);
+
+federationRouter.get('/users/:userId/following', getFollowing);
 
 export default federationRouter;

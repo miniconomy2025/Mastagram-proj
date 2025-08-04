@@ -96,7 +96,6 @@ export const getPosts = async (
 };
 
 export const getFeeds = async (
-  userId: string,
   cursor?: string
 ): Promise<PaginatedResponse<FederatedPost>> => {
   try {

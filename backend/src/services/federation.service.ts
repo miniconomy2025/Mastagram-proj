@@ -1,7 +1,29 @@
-import { type Context, Collection, CollectionPage, isActor } from "@fedify/fedify";
+import { type Context, Collection, CollectionPage, type Object, isActor } from "@fedify/fedify";
 import logger from "../logger.ts";
+import { cachedLookupObject } from '../federation/lookup.ts';
+import { normaliseLink } from "../utils/federation.util.ts";
+import type { CollectionData, FederatedUserList } from "../types/federation.types.ts";
 
-export async function fetchCollectionItems<T>(
+
+export async function transformFederatedUser(
+  item: unknown,
+): Promise<FederatedUserList | null> {
+  if (!isActor(item) || !item.id || !item.preferredUsername) {
+    return null;
+  }
+
+  const icon = await item.getIcon();
+  const iconUrl = normaliseLink(icon?.url);
+
+  return {
+    id: item.id.href,
+    handle: `@${item.preferredUsername}@${new URL(item.id.href).hostname}`,
+    name: item.name ?? item.preferredUsername,
+    avatar: iconUrl?.href,
+  };
+}
+
+export async function getCollectionItems<T>(
   ctx: Context<T>,
   collection: Collection | CollectionPage,
   page?: string,
@@ -23,7 +45,6 @@ export async function fetchCollectionItems<T>(
 
     if (collection.firstId) {
       const firstPage = await ctx.lookupObject(collection.firstId.href);
-      console.debug(`First page: ${JSON.stringify(await firstPage?.toJsonLd())}`);
       if (firstPage && firstPage instanceof CollectionPage) {
         return processCollectionPage(ctx, firstPage, mapper);
       }
@@ -73,7 +94,6 @@ async function processItems<T>(
     try {
       let resolved = item;
 
-      // Resolve URL or object with href
       const href =
         item instanceof URL
           ? item.href
@@ -97,32 +117,28 @@ async function processItems<T>(
   return results;
 }
 
-export async function getFollowersAndFollowingCount(
-  followersUrl: string,
-  followingUrl: string
-): Promise<{ followersCount: number | null; followingCount: number | null }> {
-  async function fetchCount(url: string): Promise<number | null> {
-    try {
-      const res = await fetch(url, {
-        headers: {
-          Accept: "application/activity+json"
-        }
-      });
+export async function getFederatedUserCollection(
+  ctx: Context<unknown>,
+  userId: string,
+  collectionType: 'followers' | 'following',
+  page?: string,
+): Promise<CollectionData<FederatedUserList>> {
+  const userObject = await cachedLookupObject(ctx, userId);
 
-      if (!res.ok) return null;
-
-      const data = await res.json();
-      return data.totalItems ?? null;
-    } catch (err) {
-      console.error(`Error fetching count from ${url}:`, err);
-      return null;
-    }
+  if (!userObject || !isActor(userObject)) {
+    throw new Error('User not found.');
   }
 
-  const [followersCount, followingCount] = await Promise.all([
-    fetchCount(followersUrl),
-    fetchCount(followingUrl)
-  ]);
+  const collectionId =
+    collectionType === 'followers'
+      ? userObject.followersId?.href
+      : userObject.followingId?.href;
 
-  return { followersCount, followingCount };
+  if (!collectionId) {
+    throw new Error(`${collectionType} collection not found.`);
+  }
+
+  const collection = await cachedLookupObject(ctx, collectionId) as Collection;
+
+  return getCollectionItems(ctx, collection, page, transformFederatedUser);
 }
