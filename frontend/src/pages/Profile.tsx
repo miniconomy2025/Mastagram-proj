@@ -13,8 +13,9 @@ import {
 import { Link, useParams } from 'react-router-dom';
 import { SocialPost } from '@/components/SocialPost';
 import './Profile.css';
+import DOMPurify from 'dompurify';
+import parse from 'html-react-parser';
 import { FederatedPost } from '@/types/federation';
-
 
 type ApiUser = {
   username?: string;
@@ -56,11 +57,11 @@ const useUserProfile = (handle: string | undefined) => {
 };
 
 const useUserPosts = (handle: string | undefined) => {
-    return useApiQuery<{ posts: any[] }>(
-      ['userPosts', handle],
-      handle ? `/federation/users/${handle}/posts` : '',
-      { enabled: !!handle }
-    );
+  return useApiQuery<FederatedPost>(
+    ['userPosts', handle],
+    handle ? `/federation/users/${handle}/posts` : '',
+    { enabled: !!handle }
+  );
 };
 
 const usePaginatedConnections = (
@@ -74,29 +75,25 @@ const usePaginatedConnections = (
 
   const fetchList = useCallback(async (url?: string) => {
     if (!handle || loading) return;
-   
+
     try {
       setLoading(true);
       let endpoint: string;
-     
+
       if (url) {
-        // Pagination: pass the full URL as a query parameter
         endpoint = `/federation/users/${handle}/${type}?page=${encodeURIComponent(url)}`;
       } else {
-        // Initial load: use base endpoint
         endpoint = `/federation/users/${handle}/${type}`;
       }
-     
+
       const res = await api.get<UserListResponse>(endpoint);
-     
+
       if (!url) {
-        // Initial load
         setList(res.items);
       } else {
-        // Pagination load
         setList(prev => [...prev, ...res.items]);
       }
-     
+
       setNextUrl(res.next ?? null);
       setHasMore(!!res.next);
     } catch (error) {
@@ -163,19 +160,19 @@ const Profile = () => {
     };
     fetchProfile();
   }, []);
-  const isViewingOwnProfile = !routeUsername;
 
+  const isViewingOwnProfile = !routeUsername;
   let federatedHandle;
   if (isViewingOwnProfile) {
-      const localUsername = apiUser?.email?.split('@')[0];
-      federatedHandle = localUsername ? `@${localUsername}@mastodon.social` : undefined;
+    const localUsername = apiUser?.email?.split('@')[0];
+    federatedHandle = localUsername ? `@${localUsername}@mastodon.social` : undefined;
   } else {
-      federatedHandle = `@${routeUsername}`;
+    federatedHandle = `@${routeUsername}`;
   }
 
   const federatedProfileQuery = useUserProfile(federatedHandle);
   const userPostsQuery = useUserPosts(federatedHandle);
-  
+
   const {
     list: followers,
     loading: isFollowersLoading,
@@ -190,34 +187,17 @@ const Profile = () => {
     loadMore: loadMoreFollowing
   } = usePaginatedConnections(federatedHandle, 'following');
 
-  // Map the federated posts data
-  const userPosts: FederatedPost[] = (userPostsQuery.data?.posts ?? []).map(post => ({
-    id: post.id,
-    content: post.content,
-    contentMediaType: post.contentMediaType,
-    attachment: post.attachment,
-    likesCount: post.likesCount ?? 0,
-    repliesCount: post.repliesCount ?? 0,
-    createdAt: post.createdAt,
-    author: {
-        id: post.author.id,
-        handle: post.author.handle,
-        name: post.author.name,
-        avatar: post.author.avatar,
-    },
-  }));
+  const userPosts: FederatedPost[] = userPostsQuery.data?.items ?? [];
 
-
-  // Map the federated profile data to the userData object
   const userData = {
     id: federatedProfileQuery.data?.id || '1',
     username: federatedProfileQuery.data?.handle || '',
     display_name: federatedProfileQuery.data?.name || '',
-    bio: federatedProfileQuery.data?.bio || '',
-    avatar_url: federatedProfileQuery.data?.avatarUrl || '',
+    bio: parse(DOMPurify.sanitize(federatedProfileQuery.data?.bio ))|| '',
+    avatar_url: federatedProfileQuery.data?.avatarUrl ,
     following: federatedProfileQuery.data?.following ?? 0,
     followers: federatedProfileQuery.data?.followers ?? 0,
-    posts_count: userPosts.length,
+    posts_count: userPostsQuery.data?.count ?? 0,
     verified: true
   };
 
@@ -236,7 +216,6 @@ const Profile = () => {
     user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Intersection Observer for infinite scroll
   useEffect(() => {
     if (!showConnections || !hasMoreConnections || isConnectionsLoading) return;
 
@@ -286,7 +265,7 @@ const Profile = () => {
   if (errorApiUser || federatedProfileQuery.isError || userPostsQuery.isError) {
     return <div className="empty-state">Failed to load profile.</div>;
   }
-  
+
   return (
     <div className="profile-container">
       <header className="header">
@@ -349,7 +328,7 @@ const Profile = () => {
                     key={user.id}
                     className="user-list-link"
                     onClick={() => {
-                        setShowConnections(false);
+                      setShowConnections(false);
                     }}
                   >
                     <li className="user-list-item">
@@ -365,9 +344,9 @@ const Profile = () => {
                 !isConnectionsLoading && <p className="empty-state">No users found.</p>
               )}
             </ul>
-            
+
             <div ref={sentinelRef} style={{ height: '1px', width: '100%' }} />
-            
+
             {isConnectionsLoading && (
               <div style={{
                 display: 'flex',
@@ -399,7 +378,15 @@ const Profile = () => {
             <section className="profile-section">
               <div className="profile-header">
                 <div className="avatar-wrapper">
-                  <img src={userData.avatar_url} alt="avatar" className="avatar-image" />
+                {userData.avatar_url ? (
+                  <img
+                    src={userData.avatar_url}
+                    alt={userData.display_name}
+                    className="profile-post-avatar"
+                  />
+                ) : (
+                  <div className="profile-post-avatar">{userData.display_name.charAt(0).toUpperCase()}</div>
+                )}
                   <button aria-label="Change avatar" className="change-avatar-button">
                     <Camera style={{ width: '1rem', height: '1rem', color: 'white' }} />
                   </button>
@@ -464,17 +451,20 @@ const Profile = () => {
 
               {activeTab === 'posts' && (
                 <div className="tabs-content">
-                  {userPosts.length > 0 ? (
-                    userPosts.map(post => (
+                {userData.posts_count? (
+                  userPosts
+                    .filter(post => post !== null) 
+                    .map(post => (
                       <SocialPost key={post.id} post={post} />
                     ))
-                  ) : (
-                    <div className="empty-state">
-                        <h3>No posts yet</h3>
-                        <p>This user has not posted anything.</p>
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <div className="empty-state">
+                    <h3>No posts yet</h3>
+                    <p>This user has not posted anything.</p>
+                  </div>
+                )}
+              </div>
+              
               )}
               {activeTab === 'liked' && (
                 <div className="empty-state">

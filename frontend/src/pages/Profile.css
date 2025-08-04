@@ -77,6 +77,18 @@
     padding: 0;
   }
   
+  .profile-post-avatar {
+    width: 5rem;
+    height: 5rem;
+    border-radius: 9999px;
+    border: 2px solid hsl(var(--primary));
+    background: var(--gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: hsl(var(--primary-foreground));
+    font-weight: bold;
+  }
   /* Main Content */
   .main-content {
     max-width: 28rem;
