@@ -406,7 +406,7 @@ federationRouter.get('/users/:userId/following', async (req, res) => {
 
     const response: PaginatedList<string> = {
         items: followingItems.items.map(item => item.href),
-        next: `/api/federation/users/${encodeURIComponent(userId)}/following?cursor=${nextCursor}`,
+        next: nextCursor && `/api/federation/users/${encodeURIComponent(userId)}/following?cursor=${nextCursor}`,
         count: following.totalItems ?? undefined,
     };
     res.json(response);
@@ -473,7 +473,7 @@ federationRouter.get('/users/:userId/likes', async (req, res) => {
 
     const response: PaginatedList<string> = {
         items: likedItems.items.map(item => item.href),
-        next: `/api/federation/users/${encodeURIComponent(userId)}/likes?cursor=${nextCursor}`,
+        next: nextCursor && `/api/federation/users/${encodeURIComponent(userId)}/likes?cursor=${nextCursor}`,
         count: likes.totalItems ?? undefined,
     };
     res.json(response);
@@ -529,6 +529,78 @@ federationRouter.get('/posts/:postId', async (req, res) => {
     }
 
     res.json(post);
+});
+
+federationRouter.get('/posts/:postId/replies', async (req, res) => {
+    const postId = req.params.postId;
+    logger.info`fetching post ${postId}`;
+
+    const ctx = createContext(federation, req);
+    const postObject = await cachedLookupObject(ctx, postId);
+
+    if (!(postObject instanceof Note)) {
+        res.status(404);
+        res.json({
+            message: 'Post not found.',
+        });
+        return;
+    }
+
+    logger.debug`fetched object: ${!!postObject}`;
+
+    let replies: Collection | null = null;
+
+    if (req.query.cursor && typeof req.query.cursor === 'string') {
+        try {
+            logger.debug`cursor is specified`;
+            const cursor = req.query.cursor;
+            const cursorId = base64url.default.decode(cursor);
+            logger.debug`cursor decoded as ${cursorId}`;
+            const outboxObject = await cachedLookupObject(ctx, cursorId);
+
+            if (outboxObject instanceof Collection) {
+                replies = outboxObject;
+            }
+        } catch {}
+    } else {
+        replies = await postObject.getReplies();
+    }
+
+    if (!replies) {
+        res.status(500);
+        res.json({
+            message: UNEXPECTED_ERROR,
+        });
+        return;
+    }
+
+    let replyItems;
+
+    try {
+        replyItems = await readCollection(ctx, replies);
+    } catch (error) {
+        logger.error`error reading replies collection: ${error}`;
+        res.status(500);
+        res.json({
+            message: UNEXPECTED_ERROR,
+        });
+        return;
+    }
+
+    const items = (await Promise.all(replyItems.items.map(item => objectToPost(item))))
+        .filter(item => !!item);
+
+    const nextCursor = replyItems.next
+        ? base64url.default.encode(replyItems.next.href)
+        : undefined;
+
+    const replyPosts: PaginatedList<FederatedPost> = {
+        items,
+        next: `/api/federation/posts/${encodeURIComponent(postId)}/replies?cursor=${nextCursor}`,
+        count: replies.totalItems ?? undefined,
+    };
+
+    res.json(replyPosts);
 });
 
 federationRouter.get('/posts/:postId/likes', async (req, res) => {
@@ -592,7 +664,7 @@ federationRouter.get('/posts/:postId/likes', async (req, res) => {
 
     const response: PaginatedList<string> = {
         items: likedItems.items.map(item => item.href),
-        next: `/api/federation/posts/${encodeURIComponent(postId)}/likes?cursor=${nextCursor}`,
+        next: nextCursor && `/api/federation/posts/${encodeURIComponent(postId)}/likes?cursor=${nextCursor}`,
         count: likes.totalItems ?? undefined,
     };
     res.json(response);
