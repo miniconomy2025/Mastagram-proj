@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { auth } from '@/lib/api';
 import { 
   ArrowLeft,
   User,
@@ -92,8 +92,7 @@ const Settings = () => {
                       className="w-full text-left"
                       onClick={() => {
                         if (item.isDestructive) {
-                          // Handle sign out
-                          console.log('Sign out clicked');
+                          auth.logout();
                         }
                       }}
                     >
