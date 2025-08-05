@@ -32,17 +32,6 @@ export const SearchHeader = ({ query, onQueryChange }: SearchHeaderProps) => {
             </div>
           )}
         </div>
-
-        {/*
-        <div className="mastoinstatok-header">
-          <h1 className="mastoinstatok-title">
-            MastoInstaTok
-          </h1>
-          <p className="mastoinstatok-subtitle">
-            Discover amazing content
-          </p>
-        </div>
-        */}
       </div>
     </div>
   );

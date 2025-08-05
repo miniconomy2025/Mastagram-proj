@@ -1,16 +1,7 @@
 import { UserPlus, Users } from 'lucide-react';
 import './UserCard.css';
+import { User } from '@/types/federation';
 
-interface User {
-  id: string;
-  username: string;
-  display_name: string;
-  bio: string;
-  avatar_url: string;
-  follower_count: number;
-  following_count: number;
-  created_at: string;
-}
 
 interface UserCardProps {
   user: User;
