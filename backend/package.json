@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.850.0",
+    "@elastic/elasticsearch": "^9.1.0",
     "@fedify/express": "^0.2.1",
     "@fedify/fedify": "^1.7.7",
     "@fedify/redis": "^0.4.0",

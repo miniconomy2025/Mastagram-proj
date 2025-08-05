@@ -1,41 +1,32 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   Heart, MessageCircle, Share, MoreHorizontal,
-  Bookmark, UserPlus, UserMinus, ChevronLeft, ChevronRight
+  Bookmark, UserPlus, UserMinus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useSocialActions } from '@/hooks/useSocialActions';
+import { useSocialActions } from '@/hooks/use-social-actions';
 import './SocialPost.css';
-
-interface Media {
-  url: string;
-  type: 'image' | 'video';
-}
-
-interface Post {
-  id: string;
-  user_id: string;
-  username: string;
-  caption: string;
-  hashtags: string[];
-  media?: Media[];
-  likes_count: number;
-  comments_count: number;
-  created_at: string;
-}
+import parse from 'html-react-parser';
+import DOMPurify from 'dompurify';
+import { FederatedPost } from '@/types/federation';
 
 interface SocialPostProps {
-  post: Post;
+  post: FederatedPost;
 }
 
 export const SocialPost = ({ post }: SocialPostProps) => {
   const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likes_count);
+  const [likesCount, setLikesCount] = useState(post.likesCount || 0);
   const { followUser, unfollowUser, savePost, unsavePost, isFollowing, isSaved } = useSocialActions();
   const [isPostSaved, setIsPostSaved] = useState(isSaved(post.id));
-  const [userFollowing, setUserFollowing] = useState(isFollowing(post.user_id));
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-  const mediaContainerRef = useRef<HTMLDivElement>(null);
+  const [userFollowing, setUserFollowing] = useState(isFollowing(post.author.id));
+
+  // Sanitize and parse HTML content
+  const cleanHtml = DOMPurify.sanitize(post.content);
+  const parsedContent = parse(cleanHtml);
+
+  // Extract hashtags from content
+  const hashtags = extractHashtags(post.content);
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -54,21 +45,11 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
   const handleFollow = async () => {
     if (userFollowing) {
-      await unfollowUser(post.user_id, post.username);
+      await unfollowUser(post.author.id, post.author.handle);
       setUserFollowing(false);
     } else {
-      await followUser(post.user_id, post.username);
+      await followUser(post.author.id, post.author.handle);
       setUserFollowing(true);
-    }
-  };
-
-  const handleSwipe = (direction: 'left' | 'right') => {
-    if (!post.media) return;
-
-    if (direction === 'left' && currentMediaIndex < post.media.length - 1) {
-      setCurrentMediaIndex(currentMediaIndex + 1);
-    } else if (direction === 'right' && currentMediaIndex > 0) {
-      setCurrentMediaIndex(currentMediaIndex - 1);
     }
   };
 
@@ -77,8 +58,8 @@ export const SocialPost = ({ post }: SocialPostProps) => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${post.username}'s Post`,
-          text: post.caption || 'Check out this post!',
+          title: `${post.author.name}'s Post`,
+          text: post.content.replace(/<[^>]*>/g, '').substring(0, 100),
           url: shareUrl,
         });
       } catch (err) {
@@ -94,115 +75,90 @@ export const SocialPost = ({ post }: SocialPostProps) => {
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    const startX = touch.clientX;
-    let moved = false;
+  // Simplified media rendering for single attachment
+  const renderMedia = () => {
+    if (!post.attachment) return null;
 
-    const handleTouchMove = (moveEvent: TouchEvent) => {
-      const touch = moveEvent.touches[0];
-      const diff = touch.clientX - startX;
-      if (Math.abs(diff) > 10) {
-        moved = true;
-      }
-    };
-
-    const handleTouchEnd = (endEvent: TouchEvent) => {
-      if (!moved) return;
-
-      const touch = endEvent.changedTouches[0];
-      const diff = touch.clientX - startX;
-
-      if (diff > 50) handleSwipe('right');
-      else if (diff < -50) handleSwipe('left');
-
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-
-    document.addEventListener('touchmove', handleTouchMove, { passive: true });
-    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    return (
+      <div className="social-post-media">
+        <Link to={`/post/${post.id}`}>
+          {post.attachment.type === 'image' ? (
+            <img
+              src={post.attachment.url}
+              alt={post.attachment.name || 'Post image'}
+              className="social-post-image"
+            />
+          ) : (
+            <video
+              src={post.attachment.url}
+              controls
+              playsInline
+              preload="metadata"
+              className="social-post-image"
+            />
+          )}
+        </Link>
+      </div>
+    );
   };
 
   return (
     <div className="sp-card">
       <div className="sp-header">
-        <div className="sp-user-info">
-          <div className="sp-avatar">{post.username.charAt(0).toUpperCase()}</div>
-          <div>
-            <p className="sp-username">@{post.username}</p>
-            <p className="sp-date">{new Date(post.created_at).toLocaleDateString()}</p>
+        <Link
+          to={`/profile/${post.author.handle.replace('@', '')}`}
+          key={post.author.id}
+        >
+          <div className="social-post-user-info">
+            {post.author.avatar ? (
+              <img
+                src={post.author.avatar}
+                alt={post.author.name}
+                className="social-post-avatar"
+              />
+            ) : (
+              <div className="social-post-avatar">{post.author.name.charAt(0).toUpperCase()}</div>
+            )}
+            <div>
+              <p className="social-post-username">{post.author.name}</p>
+              <p className="social-post-date">
+                {new Date(post.createdAt).toLocaleDateString()}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="sp-controls">
-          <button onClick={handleFollow} className={`sp-follow-btn ${userFollowing ? 'active' : ''}`}>
-            {userFollowing ? <UserMinus /> : <UserPlus />}
+        </Link>
+
+
+        <div className="social-post-header-actions">
+          <button
+            onClick={handleFollow}
+            className={`social-post-follow-btn ${userFollowing ? 'following' : ''}`}
+          >
+            {userFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
             {userFollowing ? 'Following' : 'Follow'}
           </button>
-          <button className="sp-icon-btn"><MoreHorizontal /></button>
+          <button className="social-post-more-btn">
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
         </div>
+
+
       </div>
 
-      {post.caption && (
-        <div className="sp-caption">
-          <p>{post.caption}</p>
-          {post.hashtags.length > 0 && (
-            <div className="sp-tags">
-              {post.hashtags.map((tag, index) => (
-                <span key={index}>#{tag}</span>
-              ))}
-            </div>
-          )}
+      <div className="sp-caption">
+        <div className="sp-content">
+          {parsedContent}
         </div>
-      )}
-
-      {post.media?.length > 0 && (
-        <div className="sp-media-wrapper">
-          <div
-            className="sp-media-slider"
-            ref={mediaContainerRef}
-            onTouchStart={handleTouchStart}
-            style={{ transform: `translateX(-${currentMediaIndex * 100}%)` }}
-          >
-            {post.media.map((item, index) => (
-              <div key={index} className="sp-media-item">
-                {item.type === 'image' ? (
-                  <img src={item.url} alt={`media-${index}`} />
-                ) : (
-                  <video src={item.url} controls playsInline preload="metadata" />
-                )}
-              </div>
+        {hashtags.length > 0 && (
+          <div className="sp-tags">
+            {hashtags.map((tag, index) => (
+              <span key={index}>#{tag}</span>
             ))}
           </div>
+        )}
+      </div>
 
-          {post.media.length > 1 && (
-            <>
-              <button
-                className={`sp-arrow left ${currentMediaIndex === 0 ? 'disabled' : ''}`}
-                onClick={() => handleSwipe('right')}
-              >
-                <ChevronLeft />
-              </button>
-              <button
-                className={`sp-arrow right ${currentMediaIndex === post.media.length - 1 ? 'disabled' : ''}`}
-                onClick={() => handleSwipe('left')}
-              >
-                <ChevronRight />
-              </button>
-              <div className="sp-dots">
-                {post.media.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentMediaIndex(i)}
-                    className={i === currentMediaIndex ? 'active' : ''}
-                    aria-label={`Go to media ${i + 1}`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      {renderMedia()}
 
       <div className="sp-actions">
         <div className="sp-left-actions">
@@ -212,7 +168,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
           </button>
           <Link to={`/post/${post.id}`} className="sp-icon-btn">
             <MessageCircle />
-            <span>{post.comments_count}</span>
+            <span>{post.repliesCount || 0}</span>
           </Link>
         </div>
         <div className="sp-right-actions">
@@ -225,3 +181,19 @@ export const SocialPost = ({ post }: SocialPostProps) => {
     </div>
   );
 };
+
+export function extractHashtags(content: string): string[] {
+  const htmlTags = Array.from(content.matchAll(/<a[^>]*class="mention hashtag"[^>]*>#<span>([^<]*)<\/span><\/a>/g))
+    .map(match => match[1]);
+
+
+  if (htmlTags.length > 0) {
+    return htmlTags;
+  }
+
+  const textContent = content.replace(/<[^>]*>/g, '');
+  const textTags = Array.from(textContent.matchAll(/#(\w+)/g))
+    .map(match => match[1]);
+
+  return [...new Set(textTags)];
+}

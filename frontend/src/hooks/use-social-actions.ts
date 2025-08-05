@@ -26,7 +26,7 @@ export const useSocialActions = () => {
       followingUsers.add(userId);
       toast({
         title: "Following",
-        description: `You are now following @${username}`,
+        description: `You are now following ${username}`,
       });
     } catch (error) {
       toast({
@@ -42,7 +42,7 @@ export const useSocialActions = () => {
       followingUsers.delete(userId);
       toast({
         title: "Unfollowed",
-        description: `You unfollowed @${username}`,
+        description: `You unfollowed ${username}`,
       });
     } catch (error) {
       toast({
