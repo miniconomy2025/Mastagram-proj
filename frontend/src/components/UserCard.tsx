@@ -2,7 +2,6 @@ import { UserPlus, Users } from 'lucide-react';
 import './UserCard.css';
 import { User } from '@/types/federation';
 
-
 interface UserCardProps {
   user: User;
 }
@@ -26,15 +25,17 @@ export const UserCard = ({ user }: UserCardProps) => {
           <div className="user-info-header">
             <div className="user-names">
               <h3 className="display-name">{user.display_name}</h3>
-              <p className="username">@{user.username}</p>
+              <p className="username">
+                @{user.username.startsWith("@") && user.username.indexOf("@", 1) !== -1
+                  ? user.username.slice(1).split("@")[0]
+                  : user.username}
+              </p>
             </div>
             <button className="follow-button">
               <UserPlus className="follow-icon" />
               Follow
             </button>
           </div>
-
-          {user.bio && <p className="user-bio">{user.bio}</p>}
 
           <div className="follow-stats">
             <div className="stat">

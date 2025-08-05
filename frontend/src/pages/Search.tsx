@@ -6,8 +6,6 @@ import { Loader2, TrendingUp } from 'lucide-react';
 import './Search.css';
 import { FederatedPost, User } from '@/types/federation';
 
-
-
 const PAGE_SIZE = 10;
 
 const Search = () => {
@@ -17,42 +15,56 @@ const Search = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   const abortController = useRef<AbortController | null>(null);
 
-  // Fetch search results when query or page changes
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      setTotal(0);
-      setError(null);
-      setPage(1);
-      return;
-    }
+  const fetchResults = (initial = false) => {
+    if (!query.trim()) return;
 
     setLoading(true);
     setError(null);
 
-    // Abort previous fetch if any
     if (abortController.current) {
       abortController.current.abort();
     }
     abortController.current = new AbortController();
 
-    fetch(`http://localhost:4000/api/search?q=${encodeURIComponent(query)}&page=${page}&size=${PAGE_SIZE}`, {
-      signal: abortController.current.signal,
-    })
+    const cursorParam = nextCursor ? `&cursor=${nextCursor}` : '';
+    const typeParam =
+      searchFilter === 'users'
+        ? '&type=user'
+        : searchFilter === 'hashtags'
+        ? '&type=post'
+        : '';
+    const url = `http://localhost:3500/api/federation/search?q=${encodeURIComponent(
+      query
+    )}${typeParam}${cursorParam}&limit=${PAGE_SIZE}`;
+
+    fetch(url, { signal: abortController.current.signal })
       .then(async (res) => {
         if (!res.ok) throw new Error(`Error: ${res.statusText}`);
         const data = await res.json();
-        console.log('Search results:', data);
-        if (page === 1) {
-          setResults(data.results);
-        } else {
-          setResults((prev) => [...prev, ...data.results]);
-        }
-        setTotal(data.total);
+
+        const mappedUsers: User[] = (data.users ?? []).map((user: any) => ({
+          id: user.id,
+          username: user.handle,
+          display_name: user.name,
+          bio: user.bio,
+          avatar_url: user.avatarUrl,
+          follower_count: user.followers,
+          following_count: user.following,
+          created_at: user.createdAt,
+        }));
+
+        const newResults: (User | FederatedPost)[] = [
+          ...mappedUsers,
+          ...(data.posts ?? []),
+        ];
+
+        setResults((prev) => (initial ? newResults : [...prev, ...newResults]));
+        setNextCursor(data.next ?? null);
+        setTotal(data.count ?? 0);
         setLoading(false);
       })
       .catch((err) => {
@@ -61,29 +73,36 @@ const Search = () => {
           setLoading(false);
         }
       });
+  };
 
-  }, [query, page]);
-
-  // Reset to first page when query changes
   useEffect(() => {
-    setPage(1);
+    if (!query.trim()) {
+      setResults([]);
+      setTotal(0);
+      setNextCursor(null);
+      setError(null);
+      return;
+    }
+
+    setNextCursor(null);
+    fetchResults(true);
   }, [query]);
 
   const loadMore = () => {
-    if (results.length < total && !loading) {
-      setPage((p) => p + 1);
+    if (!loading && nextCursor) {
+      fetchResults();
     }
   };
 
   return (
     <div className="search-page-container">
-      <SearchHeader 
-        query={query} 
+      <SearchHeader
+        query={query}
         onQueryChange={setQuery}
         // onFilterChange={setSearchFilter}
         // activeFilter={searchFilter}
       />
-      
+
       <main className="search-page-main">
         {error && (
           <div className="error-message">
@@ -111,24 +130,14 @@ const Search = () => {
         {!query.trim() && (
           <div className="welcome-section">
             <div className="welcome-header">
-              <h2 className="welcome-title">
-                Welcome to Mastagram
-              </h2>
-              <p className="welcome-subtitle">
-                Discover amazing posts and connect with creators
-              </p>
+              <h2 className="welcome-title">Welcome to Mastagram</h2>
+              <p className="welcome-subtitle">Discover amazing posts and connect with creators</p>
             </div>
-            
+
             <div className="hashtag-grid">
               {['#trending', '#viral', '#creative', '#inspiration'].map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => setQuery(tag)}
-                  className="hashtag-button"
-                >
-                  <span className="hashtag-text">
-                    {tag}
-                  </span>
+                <button key={tag} onClick={() => setQuery(tag)} className="hashtag-button">
+                  <span className="hashtag-text">{tag}</span>
                 </button>
               ))}
             </div>
@@ -136,23 +145,18 @@ const Search = () => {
         )}
 
         <div className="results-container">
-          {results.map((item) => {
-            if ('content' in item) {
-              const post = item as FederatedPost;
-              return <SocialPost key={post.id} post={post} />;
-            } else {
-              const user = item as User;
-              return <UserCard key={user.id} user={user} />;
-            }
-          })}
+          {results.map((item) =>
+            'content' in item ? (
+              <SocialPost key={item.id} post={item} />
+            ) : (
+              <UserCard key={item.id} user={item} />
+            )
+          )}
         </div>
 
-        {results.length < total && !loading && (
+        {nextCursor && !loading && (
           <div className="load-more-container">
-            <button
-              onClick={loadMore}
-              className="load-more-button"
-            >
+            <button onClick={loadMore} className="load-more-button">
               Load More Content
             </button>
           </div>
