@@ -30,10 +30,18 @@ export interface FederatedPost {
 }
 
 export interface MediaAttachment {
-//   id?: string;
   type: 'image' | 'video' | 'gifv' | 'audio';
   url: string;
   name?: string;
-//   previewUrl?: string;
-//   description?: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  display_name: string;
+  bio: string;
+  avatar_url: string;
+  follower_count: number;
+  following_count: number;
+  created_at: string;
 }
