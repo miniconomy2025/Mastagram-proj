@@ -18,3 +18,16 @@ export interface CollectionData<T> {
   total?: number;
   next?: string;
 }
+
+export interface FederatedUser {
+    id: string,
+    handle: string,
+    name: string,
+    bio: string,
+    avatarUrl?: string,
+    splashUrl?: string,
+    followers: number;
+    following: number;
+    // iso 8601 date time
+    createdAt?: string,
+};
