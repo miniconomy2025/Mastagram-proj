@@ -2,23 +2,17 @@ import SeverSideEventsManager from '../configs/sever-side-events-manager.config.
 import type { Request, Response } from 'express';
 import type { CommentModel, FollowModel, LikeModel } from '../types/interactions.js';
 
-export type LikeNotification = LikeModel & {
-    type: 'like';
-}
+export type NotificationType = 'like' | 'follow' | 'comment';
 
-export type FollowNotification = FollowModel & {
-    type: 'follow';
-}
-
-export type CommentNotification = CommentModel & {
-    type: 'comment';
+export interface Notification {
+    type: NotificationType;
+    targetId: string;
+    userId: string;
+    createdAt: Date;
 }
 
 
-export type InteractionsModel = LikeNotification | FollowNotification | CommentNotification;
-
-
-export const notificationManager = new SeverSideEventsManager<InteractionsModel>();
+export const notificationManager = new SeverSideEventsManager<Notification>();
 
 export class NotificationController {
     subscribe = async (req: Request, res: Response): Promise<void> => {

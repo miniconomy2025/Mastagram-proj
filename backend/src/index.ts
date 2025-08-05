@@ -1,3 +1,4 @@
+import './configs/polyfills';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import http from 'http';
 import cors from 'cors';

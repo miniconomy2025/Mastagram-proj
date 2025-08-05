@@ -4,7 +4,7 @@ import { ObjectId } from "mongodb";
 
 function collection() {
     const db = getDb();
-    return db.collection<Post>('posts');
+    return db.collection<Post>('feed');
 }
 
 export async function findPostById(postId: string) {

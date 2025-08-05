@@ -5,6 +5,7 @@ import { addPostDispatchers } from "./post.dispatchers.ts";
 import { addInboxListeners } from "./inbox.listeners.ts";
 import type { Request } from "express";
 import redisClient from "../redis.ts";
+import { Redis } from "ioredis";
 
 export function createContext(federation: Federation<unknown>, request: Request) {
     const url = `${request.protocol}://${request.header("Host") ?? request.hostname}`;
@@ -13,7 +14,7 @@ export function createContext(federation: Federation<unknown>, request: Request)
 
 const federation = createFederation({
   kv: new RedisKvStore(redisClient),
-  queue: new RedisMessageQueue(() => redisClient),
+  queue: new RedisMessageQueue(() => new Redis(redisClient.options)),
 });
 
 addUserDispatchers(federation);
