@@ -1,5 +1,5 @@
 import * as React from "react";
-import "./Textarea.css";
+import "./TextArea.css";
 
 export interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
