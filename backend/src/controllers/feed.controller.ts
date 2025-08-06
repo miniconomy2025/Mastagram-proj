@@ -166,7 +166,7 @@ export class FeedController {
             const ctx = createContext(federation, req);
 
             const note = new Note({
-                id: new URL(`https://mamatankane.loca.lt/post/${feedData.feedId}`),
+                id: ctx.getObjectUri(Note, { identifier: feedData.feedId }),
                 attribution: ctx.getActorUri(feedData.author),
                 content: feedData.feedType === 'media' ? (feedData.caption ?? '') : (feedData.content ?? ''),
                 attachments: feedData.media?.length
