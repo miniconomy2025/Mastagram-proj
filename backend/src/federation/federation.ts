@@ -8,7 +8,7 @@ import redisClient from "../redis.ts";
 import { Redis } from "ioredis";
 
 export function createContext(federation: Federation<unknown>, request: Request) {
-    const url = `${request.protocol}://${request.header("Host") ?? request.hostname}`;
+    const url = `${request.protocol}://${request.header("X-Original-Host") ?? request.header("Host")}`;
     return federation.createContext(new URL(url), undefined);
 }
 
