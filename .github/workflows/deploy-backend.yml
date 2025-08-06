@@ -1,0 +1,137 @@
+name: Deploy Backend to EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      ec2_ip:
+        description: 'EC2 Instance IP Address'
+        required: true
+        type: string
+      frontend_url:
+        description: 'Frontend URL for CORS configuration'
+        required: true
+        type: string
+        default: 'https://mastagram.co.za'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: Build backend
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Create deployment package
+        run: |
+          # Create deployment directory
+          mkdir -p deployment-package
+          
+          # Copy Docker Compose configuration
+          cp docker-compose.prod.yml deployment-package/
+          
+          # Copy deployment scripts
+          mkdir -p deployment-package/scripts
+          cp scripts/deploy.sh deployment-package/
+          cp scripts/setup-ec2-env.sh deployment-package/scripts/
+          chmod +x deployment-package/deploy.sh
+          chmod +x deployment-package/scripts/setup-ec2-env.sh
+          
+          # Copy backend application files
+          cp -r backend deployment-package/
+          
+          # Remove node_modules to reduce package size (will be installed in Docker)
+          rm -rf deployment-package/backend/node_modules
+          
+          # Create deployment archive
+          tar -czf deployment-package.tar.gz -C deployment-package .
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ inputs.ec2_ip }} >> ~/.ssh/known_hosts
+
+      - name: Upload deployment package to EC2
+        run: |
+          scp -i ~/.ssh/id_rsa deployment-package.tar.gz ec2-user@${{ inputs.ec2_ip }}:/tmp/
+
+      - name: Deploy to EC2 using Docker
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          FRONTEND_URL: ${{ inputs.frontend_url }}
+          EC2_PUBLIC_IP: ${{ inputs.ec2_ip }}
+        run: |
+          ssh -i ~/.ssh/id_rsa ec2-user@${{ inputs.ec2_ip }} << EOF
+            set -e
+            
+            # Navigate to application directory
+            cd /home/ec2-user/mastagram
+            
+            # Extract deployment package
+            tar -xzf /tmp/deployment-package.tar.gz
+            
+            # Set up environment variables for the setup script
+            export GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
+            export GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET"
+            export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
+            export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+            export FRONTEND_URL="$FRONTEND_URL"
+            export EC2_PUBLIC_IP="$EC2_PUBLIC_IP"
+            
+            # Set up environment variables on EC2
+            ./scripts/setup-ec2-env.sh
+            
+            # Run Docker deployment script
+            ./deploy.sh
+            
+            # Clean up deployment package
+            rm -f /tmp/deployment-package.tar.gz
+            
+            echo "Backend deployment completed successfully!"
+          EOF
+
+      - name: Verify deployment
+        run: |
+          ssh -i ~/.ssh/id_rsa ec2-user@${{ inputs.ec2_ip }} << 'EOF'
+            # Wait a moment for services to fully start
+            sleep 10
+            
+            # Check Docker container status
+            echo "=== Container Status ==="
+            docker-compose -f docker-compose.prod.yml ps
+            
+            # Test backend health endpoint
+            echo "=== Backend Health Check ==="
+            if curl -f -s http://localhost:5000/health > /dev/null; then
+              echo "✅ Backend health check passed"
+            else
+              echo "❌ Backend health check failed"
+              exit 1
+            fi
+            
+            # Show container logs (last 20 lines)
+            echo "=== Recent Container Logs ==="
+            docker-compose -f docker-compose.prod.yml logs --tail=20
+          EOF
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa
