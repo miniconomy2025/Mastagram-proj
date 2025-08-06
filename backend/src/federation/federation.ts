@@ -15,6 +15,7 @@ export function createContext(federation: Federation<unknown>, request: Request)
 const federation = createFederation({
   kv: new RedisKvStore(redisClient),
   queue: new RedisMessageQueue(() => new Redis(redisClient.options)),
+  origin: 'https://mamatankane.loca.lt'
 });
 
 addUserDispatchers(federation);

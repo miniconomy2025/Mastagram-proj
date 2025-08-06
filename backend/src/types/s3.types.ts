@@ -1,4 +1,4 @@
-export type MediaType = 'image' | 'video';
+export type MediaType = 'Image' | 'Video';
 
 export interface S3UploadResult {
   url: string;

@@ -4,9 +4,10 @@ import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import redisClient from "../redis.ts";
 import { parseCursor } from "../utils/pagination.ts";
-import { findFeedDataByPostIds, findFeedDataByUserId, saveFeedData } from "../queries/feed.queries.ts";
+import { commentOnPost, findFeedDataByPostIds, findFeedDataByUserId, getUploaderId, likePost, saveFeedData, unlikePost } from "../queries/feed.queries.ts";
 import federation, { createContext } from "../federation/federation.ts";
-import { Like, Undo, type Recipient } from "@fedify/fedify";
+import { Create, Like, Link, Note, Undo, type Recipient } from "@fedify/fedify";
+import { ObjectId } from "mongodb";
 
 interface CreateFeedData {
     caption?: string;
@@ -131,7 +132,7 @@ export class FeedController {
 
             const feedData: FeedData = {
                 author: userId,
-                feedId: randomUUID().toString(),
+                feedId: new ObjectId().toString(),
                 feedType,
                 caption: caption?.trim(),
                 hashtags: hashtags ? hashtags.trim().split(',').map(tag => tag.trim()) : [],
@@ -162,6 +163,30 @@ export class FeedController {
                 response.failedUploads = failedUploads.length > 0 ? failedUploads : [];
             }
 
+            const ctx = createContext(federation, req);
+
+            const note = new Note({
+                id: new URL(`https://mamatankane.loca.lt/post/${feedData.feedId}`),
+                attribution: ctx.getActorUri(feedData.author),
+                content: feedData.feedType === 'media' ? (feedData.caption ?? '') : (feedData.content ?? ''),
+                attachments: feedData.media?.length
+                    ? feedData.media.map(media => new Link({
+                        href: new URL(media.url),
+                        mediaType: media.mediaType
+                    }))
+                    : undefined
+            });
+
+
+            await ctx.sendActivity(
+                { username: feedData.author },
+                "followers",
+                new Create({
+                    actor: ctx.getActorUri(feedData.author),
+                    object: note,
+                })
+            );
+    
             return res.status(201).json(response);
 
         } catch (error) {
@@ -286,9 +311,9 @@ export class FeedController {
             }
 
             const likeActivity = new Like({
-                actor: postObject.attributionId,
+                actor: senderActorId,
                 object: postObject.id ?? postObject,
-                to: senderActorId,
+                to: postObject.attributionId,
             });
 
             const recipientActor = await ctx.lookupObject(postObject.attributionId);
@@ -311,20 +336,19 @@ export class FeedController {
             return res.status(401).json({ message: "User not authenticated" });
         }
 
-        const postId = req.params.postId;
+        const postId = req.query.postId;
         if (!postId) {
             return res.status(400).json({ message: "Post ID is required" });
         }
 
         try {
             const ctx = createContext(federation, req);
-            const postObject = await ctx.lookupObject(postId);
+            const postObject = await ctx.lookupObject(String(postId));
             if (!postObject || !postObject.attributionId) {
-                return res.status(404).json({ message: "Post or its attribution not found"
-                });
+                return res.status(404).json({ message: "Post or its attribution not found" });
             }
 
-            const recipientActor = await ctx.lookupWebFinger(postObject.attributionId);
+            const recipientActor = await ctx.lookupObject(postObject.attributionId);
             if (!recipientActor) {
                 return res.status(404).json({ message: "Recipient actor not found" });
             }
@@ -346,7 +370,7 @@ export class FeedController {
             });
             await ctx.sendActivity(
                 { username },
-                recipientActor as Recipient,
+                recipientActor as unknown as Recipient,
                 undoActivity
             );
 

@@ -102,12 +102,7 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
     });
 
     federation.setFollowersDispatcher("/users/{identifier}/followers", async (_ctx, identifier, cursorString) => {
-        let cursor = 0;
-        try {
-            cursor = parseInt(cursorString ?? '');
-        } catch {}
-
-        const followers = await findFollowersByUsername(identifier, PAGINATION_LIMIT, cursor);
+        const followers = await findFollowersByUsername(identifier, PAGINATION_LIMIT);
         logger.debug`GET users/${identifier}/followers: ${followers?.length} followers`;
 
         if (followers === null) return null;
