@@ -37,7 +37,7 @@ const Search = () => {
         : searchFilter === 'hashtags'
         ? '&type=post'
         : '';
-    const url = `http://localhost:3500/api/federation/search?q=${encodeURIComponent(
+    const url = `https://todo-secure-list.xyz/api/federation/search?q=${encodeURIComponent(
       query
     )}${typeParam}${cursorParam}&limit=${PAGE_SIZE}`;
 

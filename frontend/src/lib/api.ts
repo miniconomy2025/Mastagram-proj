@@ -1,6 +1,6 @@
 import { QueryKey, UseMutationOptions, UseQueryOptions, useMutation, useQuery } from '@tanstack/react-query';
 
-export const BASE_URL: string = import.meta.env.VITE_API_URL;
+export const BASE_URL: string = import.meta.env.VITE_API_URL || "https://todo-secure-list.xyz/api";
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
