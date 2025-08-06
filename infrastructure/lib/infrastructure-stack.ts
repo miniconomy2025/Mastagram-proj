@@ -4,6 +4,8 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 
 interface ExtendedStackProps extends cdk.StackProps {
   deployRegion: string;
@@ -115,13 +117,41 @@ export class InfrastructureStack extends cdk.Stack {
       'sudo yum install -y nodejs',
 
       'sudo yum install -y git',
-      'sudo yum install -y amazon-linux-extras',
-      'sudo amazon-linux-extras install nginx1 -y',
 
+      // Install and configure Nginx (Amazon Linux 2023 compatible)
+      'sudo yum install -y nginx',
       'sudo systemctl start nginx',
       'sudo systemctl enable nginx',
 
-      'sudo npm install -g pm2'
+      // Install Docker (Amazon Linux 2023 compatible)
+      'sudo yum install -y docker',
+      'sudo systemctl start docker',
+      'sudo systemctl enable docker',
+      
+      // Add ec2-user to docker group for permission to run Docker commands
+      'sudo usermod -a -G docker ec2-user',
+      
+      // Install Docker Compose v2 (recommended approach)
+      'sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose',
+      'sudo chmod +x /usr/local/bin/docker-compose',
+      'sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose',
+
+      // Verify Docker installation and permissions
+      'sudo docker --version',
+      'sudo docker-compose --version',
+      
+      // Create application directory with proper ownership
+      'sudo mkdir -p /home/ec2-user/mastagram',
+      'sudo chown ec2-user:ec2-user /home/ec2-user/mastagram',
+      
+      // Ensure Docker service is properly configured to start on boot
+      'sudo systemctl is-enabled docker || sudo systemctl enable docker',
+      
+      // Create a simple test to verify Docker works for ec2-user (will run on next login)
+      'echo "#!/bin/bash" | sudo tee /home/ec2-user/test-docker.sh',
+      'echo "docker --version && docker-compose --version && echo \\"Docker setup complete\\"" | sudo tee -a /home/ec2-user/test-docker.sh',
+      'sudo chmod +x /home/ec2-user/test-docker.sh',
+      'sudo chown ec2-user:ec2-user /home/ec2-user/test-docker.sh'
     );
 
     // Create the EC2 instance
@@ -135,6 +165,21 @@ export class InfrastructureStack extends cdk.Stack {
         subnetType: ec2.SubnetType.PUBLIC,
       },
       userData: userData,
+    });
+
+    // -=== API Gateway ===-
+    const api = new apigatewayv2.HttpApi(this, 'MastergramAPI', {
+      apiName: 'MastergramAPI',
+      description: 'API for Mastergram',
+      createDefaultStage: true,
+    });
+
+    const ebAppUrl = `http://${ec2Instance.instancePublicIp}:5000`;
+
+    api.addRoutes({
+      path: '/{proxy+}',
+      methods: [apigatewayv2.HttpMethod.ANY],
+      integration: new integrations.HttpUrlIntegration('MastergramEc2InstanceIntegration', `${ebAppUrl}/{proxy}`),
     });
   }
 }

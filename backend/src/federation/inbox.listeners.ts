@@ -4,6 +4,8 @@ import { Temporal } from "@js-temporal/polyfill";
 import { createFollower, deleteFollower } from "../queries/follower.queries.ts";
 import { likePost } from "../queries/feed.queries.ts";
 import type { LikeModel } from "../types/interactions.js";
+import { notificationManager } from "../controllers/notifications.controller.ts";
+import type { Notification } from "../controllers/notifications.controller.ts";
 
 function unimplemented<T>(message?: T) {
     if (message != null)
@@ -76,6 +78,14 @@ export function addInboxListeners<T>(federation: Federation<T>) {
                     likedAt: new Date(Temporal.Now.instant().epochMilliseconds),
                 };
                 await likePost(like);
+                const likeNotification: Notification = {
+                    type: 'like',
+                    targetId: post.id.href,
+                    userId: liker.id.href,
+                    createdAt: like.likedAt,
+                };
+
+                notificationManager.sendToUser(String(liker.preferredUsername), likeNotification);
             }
         })
         .on(Announce, async (_ctx, announce) => unimplemented(announce))
