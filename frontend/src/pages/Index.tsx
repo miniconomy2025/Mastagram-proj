@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { getFeeds } from '@/services/federation.service';
 import { FederatedPost } from '@/types/federation';
+import './Index.css'; 
 
 const Index = () => {
   const [posts, setPosts] = useState<FederatedPost[]>([]);
@@ -65,35 +66,34 @@ const Index = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="page-container">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="max-w-md mx-auto p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-primary rounded-xl">
-                <Home className="w-6 h-6 text-primary-foreground" />
+      <div className="header-sticky-wrapper">
+          <div className="header-flex-container">
+            <div className="header-left-section">
+              <div className="header-icon-box">
+                <Home className="header-icon" />
               </div>
-              <div>
-                <h1 className="font-heading font-bold text-xl text-foreground">Feed</h1>
-                <p className="text-muted-foreground text-sm">Discover trending content</p>
+              <div className="header-title-group">
+                <h1 className="header-title">Feed</h1>
+                <p className="header-subtitle">Discover trending content</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="header-right-section">
               <Link to="/search">
                 <Button variant="ghost" size="icon">
-                  <Search className="w-5 h-5" />
+                  <Search className="search-button-icon" />
                 </Button>
               </Link>
             </div>
           </div>
-        </div>
+     
       </div>
 
-      <main className="max-w-md mx-auto px-4 pb-8">
+      <main className="main-content">
         {error && (
-          <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex flex-col items-center">
-            <p className="text-destructive text-center font-medium mb-2">{error}</p>
+          <div className="error-message-container">
+            <p className="error-text">{error}</p>
             <Button 
               variant="outline" 
               size="sm" 
@@ -101,7 +101,7 @@ const Index = () => {
               disabled={isLoading}
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="retry-button-spinner" />
               ) : null}
               Retry
             </Button>
@@ -109,23 +109,23 @@ const Index = () => {
         )}
 
         {isLoading && posts.length === 0 && (
-          <div className="mt-8 flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <p className="text-muted-foreground">Loading your feed...</p>
+          <div className="initial-loading-container">
+            <Loader2 className="initial-loading-spinner" />
+            <p className="loading-text">Loading your feed...</p>
           </div>
         )}
 
         {!isLoading && posts.length === 0 && (
-          <div className="mt-12 text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-              <Home className="w-8 h-8 text-muted-foreground" />
+          <div className="empty-state-container">
+            <div className="empty-state-icon-wrapper">
+              <Home className="empty-state-icon" />
             </div>
-            <h3 className="font-heading font-semibold text-lg text-foreground">No posts yet</h3>
-            <p className="text-muted-foreground">Check back later for new content!</p>
+            <h3 className="empty-state-title">No posts yet</h3>
+            <p className="empty-state-message">Check back later for new content!</p>
           </div>
         )}
 
-        <div className="space-y-6 mt-6">
+        <div className="posts-list">
           {posts.map((post, index) => {
             if (posts.length === index + 1) {
               return (
@@ -140,20 +140,20 @@ const Index = () => {
         </div>
 
         {isLoading && posts.length > 0 && (
-          <div className="mt-6 flex justify-center">
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <div className="load-more-button-container">
+            <Loader2 className="load-more-spinner" />
           </div>
         )}
 
         {!isLoading && hasMore && posts.length > 0 && (
-          <div className="mt-6 flex justify-center">
+          <div className="load-more-button-container">
             <Button 
               variant="outline" 
               onClick={fetchPosts}
               disabled={isLoading}
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="retry-button-spinner" />
               ) : null}
               Load More
             </Button>

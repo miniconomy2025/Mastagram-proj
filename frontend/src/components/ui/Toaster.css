@@ -13,7 +13,9 @@
     gap: 1rem;
     animation: toast-in 0.25s ease-out;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .toast-content {
     display: grid;
     gap: 0.25rem;

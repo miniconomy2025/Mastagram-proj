@@ -7,6 +7,9 @@
 .saved-loading {
   padding: 1rem;
 }
+a{
+  text-decoration: none;
+}
 
 .saved-loading > div {
   margin-bottom: 1rem;

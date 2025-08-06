@@ -12,7 +12,9 @@
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-
+a{
+  text-decoration: none;
+}
 .custom-textarea::placeholder {
   color: hsl(var(--muted-foreground));
 }

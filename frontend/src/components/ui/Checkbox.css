@@ -11,7 +11,9 @@
     outline: none;
     transition: all 0.2s ease;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .custom-checkbox:focus-visible {
     box-shadow: 0 0 0 2px #93c5fd, 0 0 0 4px #2563eb; /* Focus ring */
   }

@@ -5,7 +5,9 @@
     background-color: rgba(0, 0, 0, 0.8);
     animation: fadeIn 300ms ease-out forwards;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .sheet-content {
     position: fixed;
     z-index: 51;

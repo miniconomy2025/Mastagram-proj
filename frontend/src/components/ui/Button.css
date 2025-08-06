@@ -73,12 +73,13 @@
   .button-link {
     background: none;
     color: #3b82f6;
-    text-underline-offset: 4px;
   }
   .button-link:hover {
-    text-decoration: underline;
+    text-decoration: none;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .button-social {
     background: linear-gradient(to right, #3b82f6, #6366f1);
     color: white;

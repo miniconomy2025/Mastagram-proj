@@ -3,7 +3,9 @@
   min-height: 100vh;
   background: hsl(var(--background));
 }
-
+a{
+  text-decoration: none;
+}
 .search-page-main {
   max-width: 448px; /* max-w-md */
   margin: 0 auto;

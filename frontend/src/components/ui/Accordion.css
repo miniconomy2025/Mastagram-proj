@@ -19,9 +19,11 @@
   }
   
   .accordion-trigger:hover {
-    text-decoration: underline;
+    text-decoration: none;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .accordion-trigger svg {
     height: 1rem;
     width: 1rem;

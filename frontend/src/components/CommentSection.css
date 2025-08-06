@@ -193,7 +193,9 @@
 .comment-item-like-btn.liked svg {
   fill: currentColor;
 }
-
+a{
+  text-decoration: none;
+}
 .comment-item-reply-btn {
   background: transparent;
   border: none;

@@ -9,7 +9,9 @@
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
 }
-
+a{
+  text-decoration: none;
+}
 .bottom-nav-container {
   max-width: 28rem; /* max-w-md */
   margin: 0 auto; /* mx-auto */

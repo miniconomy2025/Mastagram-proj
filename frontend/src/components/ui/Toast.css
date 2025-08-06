@@ -9,7 +9,9 @@
     width: 100%;
     padding: 1rem;
   }
-  
+  a{
+    text-decoration: none;
+  }
   @media (min-width: 640px) {
     .toast-viewport {
       top: auto;

@@ -48,6 +48,10 @@
     backdrop-filter: blur(12px);
     border-bottom: 1px solid hsl(var(--border));
   }
+  .text-foreground {
+    color: white;
+  }
+  
   
   .header-content {
     max-width: 28rem;
@@ -119,21 +123,6 @@
     border: 2px solid hsl(var(--primary));
   }
   
-  .change-avatar-button {
-    position: absolute;
-    bottom: -0.25rem;
-    right: -0.25rem;
-    width: 2rem;
-    height: 2rem;
-    background-color: hsl(var(--primary));
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    cursor: pointer;
-  }
-  
   .profile-stats {
     flex: 1;
     display: grid;
@@ -149,11 +138,14 @@
   
   .stat-item {
     text-align: center;
+    background-color: hsl(var(--background));
+    border: none;
   }
   
   .stat-value {
     font-weight: bold;
     font-size: 1.125rem;
+   color: #F2F2F2;
   }
   
   .stat-label {
@@ -283,17 +275,22 @@
   .user-list-info {
     display: flex;
     flex-direction: column;
+    text-decoration: none;
   }
   
   .user-list-name {
     font-weight: 600;
     margin: 0;
+    color: white;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .user-list-handle {
     color: hsl(var(--muted-foreground));
     font-size: 0.875rem;
     margin: 0;
+    text-decoration: none;
   }
   
   .empty-state {
