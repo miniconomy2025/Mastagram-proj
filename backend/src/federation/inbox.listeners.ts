@@ -2,7 +2,7 @@ import { Accept, Add, Announce, Block, Create, Delete, Follow, Like, Reject, Rem
 import logger from "../logger.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import { createFollower, deleteFollower } from "../queries/follower.queries.ts";
-import { likePost } from "../queries/feed.queries.ts";
+import { likePost, unlikePost } from "../queries/feed.queries.ts";
 import type { LikeModel } from "../types/interactions.js";
 import { notificationManager } from "../controllers/notifications.controller.ts";
 import type { Notification } from "../controllers/notifications.controller.ts";
@@ -77,15 +77,19 @@ export function addInboxListeners<T>(federation: Federation<T>) {
                     likedBy: liker.id.href,
                     likedAt: new Date(Temporal.Now.instant().epochMilliseconds),
                 };
-                await likePost(like);
-                const likeNotification: Notification = {
-                    type: 'like',
-                    targetId: post.id.href,
-                    userId: liker.id.href,
-                    createdAt: like.likedAt,
-                };
+                try {
+                    await likePost(like);
+                    const likeNotification: Notification = {
+                        type: 'like',
+                        targetId: post.id.href,
+                        userId: liker.id.href,
+                        createdAt: like.likedAt,
+                    };
 
-                notificationManager.sendToUser(String(liker.preferredUsername), likeNotification);
+                    notificationManager.sendToUser(String(liker.preferredUsername), likeNotification);
+                } catch (error) {
+                    logger.error`Failed to like post ${post.id.href}: ${error}`;
+                }
             }
         })
         .on(Announce, async (_ctx, announce) => unimplemented(announce))
@@ -104,8 +108,9 @@ export function addInboxListeners<T>(federation: Federation<T>) {
                 await deleteFollower(undo.actorId.href, parsedObject.identifier);
     
                 logger.info`Removed follower ${undo.actorId}`;
-            } else {
-                unimplemented(object);
+            } else if (object instanceof Like) {
+                if (undo.actorId == null || object.objectId == null) return;
+                await unlikePost(undo.actorId.href, object.objectId.href);
             }
         });
 }

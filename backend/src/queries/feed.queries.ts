@@ -77,7 +77,7 @@ export async function deleteComment(postId: string, commentId: string) {
 // Helper
 export async function getUploaderId(postId: string): Promise<string | undefined> {
     const feed = await feedCollection().findOne({ feedId: postId });
-    return feed?.userId;
+    return feed?.author;
 }
 
 export async function saveFeedData(feedData: FeedData) {
