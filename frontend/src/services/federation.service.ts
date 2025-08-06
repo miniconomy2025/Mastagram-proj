@@ -1,6 +1,6 @@
 import { FederatedPost, FederatedUser, PaginatedResponse } from "@/types/federation";
 
-const API_BASE_URL = 'http://localhost:3500/api/federation';
+const API_BASE_URL = 'https://todo-secure-list.xyz/api/federation';
 
 export const getFollowing = async (
   userId: string,
