@@ -13,7 +13,7 @@ const Login = () => {
     try {
       setLoading(true);
       
-      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3500/api';
+      const backendUrl = import.meta.env.VITE_API_URL || 'https://todo-secure-list.xyz/api';
       
       window.location.assign(`${backendUrl}/auth/session`);
     } catch (error) {
