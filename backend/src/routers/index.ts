@@ -4,6 +4,7 @@ import profileRouter from './profile.router.ts';
 import feedRouter from './feed.router.ts';
 import federationRouter from './federation.router.ts';
 import notificationsRouter from './notifications.router.ts';
+import followRouter from './follow.router.ts';
 
 const apiRouter = Router();
 
@@ -12,6 +13,8 @@ apiRouter.use('/profile', profileRouter);
 apiRouter.use('/feed', feedRouter);
 apiRouter.use('/federation', federationRouter);
 apiRouter.use('/notifications', notificationsRouter);
+apiRouter.use('/follow', followRouter);
+
 
 // Health check endpoint
 apiRouter.get('/health', (req, res) => {
