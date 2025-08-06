@@ -9,8 +9,7 @@ import { Redis } from "ioredis";
 import config from "../config.ts";
 
 export function createContext(federation: Federation<unknown>, request: Request) {
-    const url = `${request.protocol}://${request.header("X-Original-Host") ?? request.header("Host")}`;
-    return federation.createContext(new URL(url), undefined);
+    return federation.createContext(new URL(config.federation.origin!), undefined);
 }
 
 const federation = createFederation({
