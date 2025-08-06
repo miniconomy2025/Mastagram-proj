@@ -3,6 +3,14 @@
   min-height: 100vh;
   background: hsl(var(--background));
 }
+@media (min-width: 1024px) {
+  .search-page-container{
+    padding-left: 15rem;
+    
+  }
+  
+  }
+
 a{
   text-decoration: none;
 }

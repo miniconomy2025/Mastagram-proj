@@ -35,7 +35,7 @@
     margin-right: auto;
     padding: 1rem; /* p-4 */
   }
-  
+
   .header-flex-container {
     max-width: 28rem;
     margin: 0 auto;
@@ -45,6 +45,11 @@
     padding: 1rem;
   }
   
+  @media (min-width: 1024px) {
+    .page-container  {
+      padding-left: 15rem;
+    }
+  }
   .header-left-section {
     display: flex;
     align-items: center;
@@ -52,9 +57,14 @@
   }
   
   .header-icon-box {
-    padding: 0.5rem; /* p-2 */
-    background: linear-gradient(to right, #6366f1, #8b5cf6); /* Example gradient, adjust as per your 'gradient-primary' */
-    border-radius: 0.75rem; /* rounded-xl */
+    width: 2.5rem; 
+    height: 2.5rem; 
+    background: linear-gradient(to top right, #ec4899, #f59e0b); 
+    border-radius: 0.75rem; 
+    display: flex;
+    align-items: center; 
+    justify-content: center; 
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
   }
   
   .header-icon {

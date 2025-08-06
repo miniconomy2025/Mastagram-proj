@@ -20,6 +20,7 @@
   
   a{
     text-decoration: none;
+    color: white;
   }
   .settings-page-container {
     min-height: 100vh;
@@ -34,6 +35,12 @@
     background-color: rgba(18, 18, 18, 0.8); /* Using RGB for backdrop-blur effect, matching new background */
     backdrop-filter: blur(8px); /* backdrop-blur-md */
     border-bottom: 1px solid var(--border);
+  }
+  
+  @media (min-width: 1024px) {
+    .settings-page-container  {
+      padding-left: 15rem;
+    }
   }
   
   .header-content {

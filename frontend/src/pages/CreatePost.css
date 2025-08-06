@@ -73,6 +73,12 @@
     max-width: 28rem;
     margin: 0 auto;
   }
+  @media (min-width: 1024px) {
+    .create-post{
+      padding-left: 15rem;
+    }
+  }
+  
   
   .media-selection {
     display: flex;
