@@ -6,7 +6,7 @@ import redisClient from "../redis.ts";
 import { parseCursor } from "../utils/pagination.ts";
 import { commentOnPost, findFeedDataByPostIds, findFeedDataByUserId, getUploaderId, likePost, saveFeedData, unlikePost } from "../queries/feed.queries.ts";
 import federation, { createContext } from "../federation/federation.ts";
-import { Create, Like, Link, Note, Undo, type Recipient } from "@fedify/fedify";
+import { Create, Like, Link, Note, Undo, Video, Image, type Recipient } from "@fedify/fedify";
 import { ObjectId } from "mongodb";
 
 interface CreateFeedData {
@@ -170,10 +170,17 @@ export class FeedController {
                 attribution: ctx.getActorUri(feedData.author),
                 content: feedData.feedType === 'media' ? (feedData.caption ?? '') : (feedData.content ?? ''),
                 attachments: feedData.media?.length
-                    ? feedData.media.map(media => new Link({
-                        href: new URL(media.url),
-                        mediaType: media.mediaType
-                    }))
+                    ? feedData.media.map(media =>
+                        media.mediaType === 'image'
+                            ? new Image({
+                                url: new URL(media.url),
+                                mediaType: 'image/jpeg',
+                            })
+                            : new Video({
+                                url: new URL(media.url),
+                                mediaType: 'video/mp4',
+                            })
+                    )
                     : undefined
             });
 

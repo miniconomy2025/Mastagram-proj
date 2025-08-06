@@ -27,6 +27,9 @@ const config = {
         port: parseInt(process.env.APP_PORT || '3500'),
         objectCacheTimeSeconds: parseInt(process.env.APP_OBJECT_CACHE_TIME_SECONDS || '300'),
     },
+    federation: {
+        origin: process.env.FEDERATION_ORIGIN,
+    },
 };
 
 export default config;

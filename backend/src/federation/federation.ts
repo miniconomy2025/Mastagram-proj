@@ -6,6 +6,7 @@ import { addInboxListeners } from "./inbox.listeners.ts";
 import type { Request } from "express";
 import redisClient from "../redis.ts";
 import { Redis } from "ioredis";
+import config from "../config.ts";
 
 export function createContext(federation: Federation<unknown>, request: Request) {
     const url = `${request.protocol}://${request.header("X-Original-Host") ?? request.header("Host")}`;
@@ -15,7 +16,7 @@ export function createContext(federation: Federation<unknown>, request: Request)
 const federation = createFederation({
   kv: new RedisKvStore(redisClient),
   queue: new RedisMessageQueue(() => new Redis(redisClient.options)),
-  origin: 'https://mamatankane.loca.lt'
+  origin: config.federation.origin,
 });
 
 addUserDispatchers(federation);
