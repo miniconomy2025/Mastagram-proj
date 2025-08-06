@@ -4,6 +4,8 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 
 interface ExtendedStackProps extends cdk.StackProps {
   deployRegion: string;
@@ -163,6 +165,21 @@ export class InfrastructureStack extends cdk.Stack {
         subnetType: ec2.SubnetType.PUBLIC,
       },
       userData: userData,
+    });
+
+    // -=== API Gateway ===-
+    const api = new apigatewayv2.HttpApi(this, 'MastergramAPI', {
+      apiName: 'MastergramAPI',
+      description: 'API for Mastergram',
+      createDefaultStage: true,
+    });
+
+    const ebAppUrl = `http://${ec2Instance.instancePublicIp}:5000`;
+
+    api.addRoutes({
+      path: '/{proxy+}',
+      methods: [apigatewayv2.HttpMethod.ANY],
+      integration: new integrations.HttpUrlIntegration('MastergramEc2InstanceIntegration', `${ebAppUrl}/{proxy}`),
     });
   }
 }
