@@ -124,6 +124,8 @@ const useProfileData = () => {
   const [isLoadingApiUser, setIsLoadingApiUser] = useState(true);
   const [errorApiUser, setErrorApiUser] = useState<Error | null>(null);
 
+  console.log()
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -142,7 +144,7 @@ const useProfileData = () => {
 
   const isViewingOwnProfile = !routeUsername;
   const federatedHandle = isViewingOwnProfile
-    ? apiUser?.email ? `@${apiUser.email.split('@')[0]}@todo-secure-list.xyz` : undefined
+    ? apiUser?.username ? `@${apiUser.username}@todo-secure-list.xyz` : undefined
     : `@${routeUsername}`;
 
   return {
