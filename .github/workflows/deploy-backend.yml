@@ -1,6 +1,13 @@
 name: Deploy Backend to EC2
 
 on:
+  pull_request:
+    branches: [ main, master, fix-backend-deployment ]
+    paths:
+      - 'backend/**'
+      - 'docker-compose.prod.yml'
+      - 'scripts/**'
+      - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
     inputs:
       ec2_ip:
@@ -17,22 +24,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     
+    env:
+      EC2_IP: ${{ inputs.ec2_ip || '13.247.22.228' }} 
+      FRONTEND_URL: ${{ inputs.frontend_url || 'https://d24gwdo6q6b8x9.cloudfront.net' }}
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm install
-
-      - name: Build backend
-        working-directory: ./backend
-        run: npm run build
 
       - name: Create deployment package
         run: |
@@ -49,11 +47,8 @@ jobs:
           chmod +x deployment-package/deploy.sh
           chmod +x deployment-package/scripts/setup-ec2-env.sh
           
-          # Copy backend application files
+          # Copy backend application files (Docker will handle build)
           cp -r backend deployment-package/
-          
-          # Remove node_modules to reduce package size (will be installed in Docker)
-          rm -rf deployment-package/backend/node_modules
           
           # Create deployment archive
           tar -czf deployment-package.tar.gz -C deployment-package .
@@ -63,22 +58,26 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ inputs.ec2_ip }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ env.EC2_IP }} >> ~/.ssh/known_hosts
 
       - name: Upload deployment package to EC2
         run: |
-          scp -i ~/.ssh/id_rsa deployment-package.tar.gz ec2-user@${{ inputs.ec2_ip }}:/tmp/
+          scp -i ~/.ssh/id_rsa deployment-package.tar.gz ec2-user@${{ env.EC2_IP }}:/tmp/
 
       - name: Deploy to EC2 using Docker
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALLBACK_URL: ${{ secrets.GOOGLE_CALLBACK_URL }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          FRONTEND_URL: ${{ inputs.frontend_url }}
-          EC2_PUBLIC_IP: ${{ inputs.ec2_ip }}
+          ES_NODE_URL: ${{ secrets.ES_NODE_URL }}
+          ES_API_KEY: ${{ secrets.ES_API_KEY }}
+          FRONTEND_URL: ${{ env.FRONTEND_URL }}
+          EC2_PUBLIC_IP: ${{ env.EC2_IP }}
+          FEDERATION_ORIGIN: ${{ secrets.FEDERATION_ORIGIN }}
         run: |
-          ssh -i ~/.ssh/id_rsa ec2-user@${{ inputs.ec2_ip }} << EOF
+          ssh -i ~/.ssh/id_rsa ec2-user@${{ env.EC2_IP }} << EOF
             set -e
             
             # Navigate to application directory
@@ -90,9 +89,13 @@ jobs:
             # Set up environment variables for the setup script
             export GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
             export GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET"
+            export GOOGLE_CALLBACK_URL="$GOOGLE_CALLBACK_URL"
             export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
             export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+            export ES_NODE_URL="$ES_NODE_URL"
+            export ES_API_KEY="$ES_API_KEY"
             export FRONTEND_URL="$FRONTEND_URL"
+            export FEDERATION_ORIGIN="$FEDERATION_ORIGIN"
             export EC2_PUBLIC_IP="$EC2_PUBLIC_IP"
             
             # Set up environment variables on EC2
@@ -109,7 +112,7 @@ jobs:
 
       - name: Verify deployment
         run: |
-          ssh -i ~/.ssh/id_rsa ec2-user@${{ inputs.ec2_ip }} << 'EOF'
+          ssh -i ~/.ssh/id_rsa ec2-user@${{ env.EC2_IP }} << 'EOF'
             # Wait a moment for services to fully start
             sleep 10
             

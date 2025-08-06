@@ -45,6 +45,14 @@ validate_required_params() {
         missing_params+=("AWS_SECRET_ACCESS_KEY")
     fi
     
+    if [ -z "$ES_NODE_URL" ]; then
+        missing_params+=("ES_NODE_URL")
+    fi
+    
+    if [ -z "$ES_API_KEY" ]; then
+        missing_params+=("ES_API_KEY")
+    fi
+    
     if [ -z "$FRONTEND_URL" ]; then
         missing_params+=("FRONTEND_URL")
     fi
@@ -61,6 +69,8 @@ validate_required_params() {
         echo "  GOOGLE_CLIENT_SECRET     - Google OAuth client secret"
         echo "  AWS_ACCESS_KEY_ID        - AWS access key for S3"
         echo "  AWS_SECRET_ACCESS_KEY    - AWS secret key for S3"
+        echo "  ES_NODE_URL              - Elasticsearch node URL"
+        echo "  ES_API_KEY               - Elasticsearch API key"
         echo "  FRONTEND_URL             - Frontend application URL"
         echo ""
         echo "Optional environment variables:"
@@ -119,7 +129,7 @@ REDIS_URL=redis://redis:6379
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-GOOGLE_CALLBACK_URL=http://${ec2_ip}:5000/api/auth/tokens
+GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://${ec2_ip}:5000/api/auth/tokens}
 
 # AWS S3 Configuration
 AWS_REGION=${aws_region}
@@ -127,6 +137,13 @@ AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 S3_BUCKET_NAME=${s3_bucket_name}
 S3_BUCKET_URL=${s3_bucket_url}
+
+# Elasticsearch Configuration
+ES_NODE_URL=${ES_NODE_URL}
+ES_API_KEY=${ES_API_KEY}
+
+# Federation Configuration
+FEDERATION_ORIGIN=${ec2_ip}:5000
 
 # Frontend Configuration
 FRONTEND_URL=${FRONTEND_URL}
