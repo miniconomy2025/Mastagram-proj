@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import type { S3OperationResponse, S3UploadResult } from '../types/s3.types.ts';
 
+const CDN_URL= process.env.USER_CONTENT!;
+
 const handleS3Error = (error: any, defaultMessage: string, ErrorClass: any) => {
   console.error(defaultMessage, error);
   
@@ -65,7 +67,7 @@ export async function uploadToS3(
     return {
       success: true,
       data: {
-        url: `${s3Settings.bucketUrl}/${fileName}`,
+        url: `${CDN_URL}/${fileName}`,
         key: fileName,
         mediaType: file.mimetype.startsWith('image/') ? 'image' : 'video'
       }
