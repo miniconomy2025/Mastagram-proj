@@ -102,7 +102,11 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
     });
 
     federation.setFollowersDispatcher("/users/{identifier}/followers", async (_ctx, identifier, cursorString) => {
-        const followers = await findFollowersByUsername(identifier, PAGINATION_LIMIT);
+        let cursor = parseInt(cursorString ?? '');
+        if (!isFinite(cursor))
+            cursor = Number.MAX_SAFE_INTEGER;
+
+        const followers = await findFollowersByUsername(identifier, PAGINATION_LIMIT, cursor);
         logger.debug`GET users/${identifier}/followers: ${followers?.length} followers`;
 
         if (followers === null) return null;
@@ -128,10 +132,9 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
     });
 
     federation.setFollowingDispatcher("/users/{identifier}/following", async (_ctx, identifier, cursorString) => {
-        let cursor = 0;
-        try {
-            cursor = parseInt(cursorString ?? '');
-        } catch {}
+        let cursor = parseInt(cursorString ?? '');
+        if (!isFinite(cursor))
+            cursor = Number.MAX_SAFE_INTEGER;
 
         const followings = await findFollowingByUsername(identifier, PAGINATION_LIMIT, cursor);
         logger.debug`GET users/${identifier}/following: ${followings?.length} following`;
@@ -151,10 +154,9 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
     });
 
     federation.setOutboxDispatcher("/users/{identifier}/outbox", async (ctx, identifier, cursorString) => {
-        let cursor = 0;
-        try {
-            cursor = parseInt(cursorString ?? '');
-        } catch {}
+        let cursor = parseInt(cursorString ?? '');
+        if (!isFinite(cursor))
+            cursor = Number.MAX_SAFE_INTEGER;
 
         const posts = await findPostsByAuthor(identifier, PAGINATION_LIMIT, cursor);
         logger.debug`GET users/${identifier}/outbox: ${posts?.length} posts`;
