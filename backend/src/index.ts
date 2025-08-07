@@ -8,6 +8,7 @@ import { setupSwaggerDocs } from './configs/swagger.ts';
 import config from './config.ts';
 import { integrateFederation } from '@fedify/express';
 import federation from './federation/federation.ts';
+import logger from './logger.ts';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -46,7 +47,8 @@ app.get('/', (_req, res) => {
 
 app.use(integrateFederation(federation, (_req) => undefined));
 
-app.use((_err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  logger.error`unhandled error: ${err}`;
   res.status(500);
   res.json({
     message: 'An unexpected error has occurred.',

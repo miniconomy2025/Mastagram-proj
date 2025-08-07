@@ -9,28 +9,27 @@ export async function cachedLookupObject<T>(ctx: Context<T>, id: string): Promis
     const cachedObject = await redisClient.get(cacheKey);
     if (cachedObject) {
         try {
-            logger.debug`object was in cache`;
+            logger.debug`object was in cache: ${id}`;
             return await Object.fromJsonLd(JSON.parse(cachedObject));
         } catch {
-            logger.error`failed to fetch object from cache`;
+            logger.error`failed to fetch object from cache: ${id}`;
             return null;
         }
     }
     
-    
     try {
-        logger.debug`object was not in cache, fetching...`;
+        logger.debug`object was not in cach, fetching: ${id}`;
         const object = await ctx.lookupObject(id);
         logger.debug`fetched object: ${!!object}`;
 
         if (object) {
-            logger.debug`saved object to cache`;
+            logger.debug`saved object to cache: ${id}`;
             await redisClient.set(cacheKey, JSON.stringify(await object.toJsonLd()), 'EX', config.app.objectCacheTimeSeconds);
         }
 
         return object;
     } catch {
-        logger.error`failed to fetch object`;
+        logger.error`failed to fetch object: ${id}`;
         return null;
     }
 }

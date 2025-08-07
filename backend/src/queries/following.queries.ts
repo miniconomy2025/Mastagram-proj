@@ -28,11 +28,11 @@ export async function findFollowingByUsername(username: string, limit: number, c
     return userFollowing.toArray();
 }
 
-export async function checkIfFollowing(followerUsername: string, followingUsername: string): Promise<boolean> {
+export async function checkIfFollowing(followerUsername: string, followingActorId: string): Promise<boolean> {
     const following = collection();
     const result = await following.findOne({
       followerUsername,
-      following: followingUsername, 
+      following: followingActorId, 
     });
   
     return !!result;

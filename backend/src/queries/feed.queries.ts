@@ -45,6 +45,14 @@ export async function findFeedDataByPostIds(postIds: string[]): Promise<(FeedDat
     })));
 }
 
+export async function doesUserLikePost(username: string, postId: string) {
+    const likes = await likesCollection();
+    return !!(await likes.findOne({
+        likedBy: username,
+        postId,
+    }));
+}
+
 export async function likePost(like: LikeModel) {
     await likesCollection().insertOne(like);
     await notificationsCollection().insertOne({
