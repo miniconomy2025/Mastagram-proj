@@ -16,7 +16,7 @@ interface CreateFeedData {
     content?: string;
 }
 
-interface Media {
+export interface Media {
     url: string;
     mediaType: MediaType;
 }
