@@ -5,6 +5,7 @@ import feedRouter from './feed.router.ts';
 import federationRouter from './federation.router.ts';
 import notificationsRouter from './notifications.router.ts';
 import followRouter from './follow.router.ts';
+import savedPostsRouter from './saved-post.router.ts';
 
 const apiRouter = Router();
 
@@ -14,6 +15,7 @@ apiRouter.use('/feed', feedRouter);
 apiRouter.use('/federation', federationRouter);
 apiRouter.use('/notifications', notificationsRouter);
 apiRouter.use('/follow', followRouter);
+apiRouter.use('/saved-posts', savedPostsRouter);
 
 
 // Health check endpoint
