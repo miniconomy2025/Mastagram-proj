@@ -49,12 +49,12 @@ app.get('/', (_req, res) => {
 
 app.use(integrateFederation(federation, (_req) => undefined));
 
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   logger.error`unhandled error: ${err}`;
   res.status(500);
   res.json({
     message: 'An unexpected error has occurred.',
-  })
+  });
 });
 
 // Initialize everything

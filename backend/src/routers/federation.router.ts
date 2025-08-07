@@ -1,5 +1,5 @@
 import { Router } from "express";
-import federation, { createContext, PAGINATION_LIMIT } from "../federation/federation.ts";
+import federation, { createContext, federatedHostname, PAGINATION_LIMIT } from "../federation/federation.ts";
 import logger from "../logger.ts";
 import { cachedLookupObject } from "../federation/lookup.ts";
 import { Collection, CollectionPage, Create, Document, Image, isActor, Link, type Actor, Note, Object, Video, type Context } from "@fedify/fedify";
@@ -520,7 +520,7 @@ federationRouter.get('/me/following/posts', ensureAuthenticated, async (req, res
         return res.status(401).json({error: 'Not logged in!'});
     }
 
-    const userHandle = `@${username}@${config.federation.origin}`;
+    const userHandle = `@${username}@${federatedHostname}`;
 
     let cursor = Temporal.Now.instant();
     try {
