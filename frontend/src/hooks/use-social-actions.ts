@@ -1,15 +1,34 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api'; 
+import { api } from '@/lib/api';
 import { FederatedPost } from '@/types/federation';
+import { useQuery } from '@tanstack/react-query';
 
 export const useSocialActions = () => {
   const { toast } = useToast();
 
   const [likedPosts, setLikedPosts] = useState(new Set<string>());
   const [followingUsers, setFollowingUsers] = useState(new Set<string>());
-  
-  const [savedPosts, setSavedPosts] = useState(new Set<string>());
+  const [savedPosts, setSavedPosts] = useState<Record<string, FederatedPost>>({});
+
+
+  const {
+    refetch: fetchSavedPosts,
+    data: serverSavedPosts = []
+  } = useQuery<FederatedPost[]>({
+    queryKey: ['saved-posts'],
+    queryFn: async () => {
+      const response = await api.get<{ items: FederatedPost[] }>('/saved-posts');
+      const newSavedPosts = response.items.reduce((acc, post) => {
+        if (post) acc[post.id] = post;
+        return acc;
+      }, {} as Record<string, FederatedPost>);
+      setSavedPosts(newSavedPosts);
+      return response.items;
+    },
+    enabled: false, 
+    initialData: [] 
+  });
 
   const followUser = useCallback(async (userId: string, username: string) => {
     try {
@@ -51,28 +70,32 @@ export const useSocialActions = () => {
     }
   }, [toast]);
 
-  const savePost = useCallback(async (postId: string) => {
+  const savePost = useCallback(async (post: FederatedPost) => {
     try {
-      setSavedPosts(prev => new Set(prev).add(postId));
+      await api.post('/saved-posts', { post });
+      setSavedPosts(prev => ({ ...prev, [post.id]: post }));
       toast({
         title: "Post saved",
         description: "Post added to your saved collection",
       });
     } catch (error) {
+      console.error('Save failed:', error);
       toast({
         title: "Error",
         description: "Failed to save post",
         variant: "destructive",
       });
+      throw error;
     }
   }, [toast]);
 
   const unsavePost = useCallback(async (postId: string) => {
     try {
+      await api.delete('/saved-posts', { data: { postId } });
       setSavedPosts(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(postId);
-        return newSet;
+        const newPosts = { ...prev };
+        delete newPosts[postId];
+        return newPosts;
       });
       toast({
         title: "Post removed",
@@ -84,8 +107,13 @@ export const useSocialActions = () => {
         description: "Failed to remove post",
         variant: "destructive",
       });
+      throw error;
     }
   }, [toast]);
+
+  const toggleSavePost = useCallback(async (post: FederatedPost) => {
+    return isSaved(post.id) ? unsavePost(post.id) : savePost(post);
+  }, [savePost, unsavePost]);
 
   const likePost = useCallback(async (postId: string) => {
     try {
@@ -132,23 +160,32 @@ export const useSocialActions = () => {
   }, [followingUsers]);
 
   const isSaved = useCallback((postId: string) => {
-    return savedPosts.has(postId);
+    return Boolean(savedPosts[postId]);
   }, [savedPosts]);
 
   const isLiked = useCallback((postId: string) => {
     return likedPosts.has(postId);
   }, [likedPosts]);
 
+  const savedPostsArray = useMemo(() => Object.values(savedPosts), [savedPosts]);
+
   return {
     followUser,
     unfollowUser,
     savePost,
     unsavePost,
+    toggleSavePost,
     likePost,
     unlikePost,
+    fetchSavedPosts,
     isFollowing,
     isSaved,
     isLiked,
     likedPosts,
+    followingUsers: Array.from(followingUsers),
+    savedPosts: savedPostsArray,
+    likedPostsSet: likedPosts,
+    followingUsersSet: followingUsers,
+    savedPostsMap: savedPosts
   };
 };

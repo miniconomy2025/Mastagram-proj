@@ -70,7 +70,7 @@ export const getFeeds = async (
   cursor?: string
 ): Promise<PaginatedResponse<FederatedPost>> => {
   try {
-    const url = '/${API_BASE_URL}/me/following/posts';
+    const url = `/${API_BASE_URL}/me/following/posts`;
   
     const params = cursor ? { cursor } : undefined;
     
