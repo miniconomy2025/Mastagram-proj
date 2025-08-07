@@ -1,0 +1,179 @@
+/* Settings.css */
+
+/* Dark Mode Defaults (always on) */
+:root {
+    --background: #121212; /* Darker background as per image */
+    --foreground: #f3f4f6;
+    --primary: #6366f1;
+    --primary-foreground: #ffffff;
+    --muted: #374151;
+    --muted-foreground: #d1d5db;
+    --border: #4b5563;
+    --destructive: #ef4444; /* For destructive actions */
+    --card-background: #1a1a1a; /* Darker card background */
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08); /* shadow-card */
+  
+    /* Icon specific colors from the image */
+    --icon-background-color: #333333; /* Dark background for icons */
+    --icon-color: #f3f4f6; /* Light color for icons */
+  }
+  
+  a{
+    text-decoration: none;
+    color: white;
+  }
+  .settings-page-container {
+    min-height: 100vh;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  
+  .header-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: rgba(18, 18, 18, 0.8); /* Using RGB for backdrop-blur effect, matching new background */
+    backdrop-filter: blur(8px); /* backdrop-blur-md */
+    border-bottom: 1px solid var(--border);
+  }
+  
+  @media (min-width: 1024px) {
+    .settings-page-container  {
+      padding-left: 15rem;
+    }
+  }
+  
+  .header-content {
+    max-width: 768px; /* max-w-md */
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem; /* p-4 */
+  }
+  
+  .header-icon {
+    width: 1.5rem; /* w-6 */
+    height: 1.5rem; /* h-6 */
+    color: var(--foreground);
+  }
+  
+  .header-title {
+    font-family: var(--font-heading);
+    font-weight: bold;
+    font-size: 1.25rem; /* text-xl */
+    color: var(--foreground);
+  }
+  
+  .spacer-div {
+    width: 1.5rem; /* w-6 */
+  }
+  
+  .main-content {
+    max-width: 768px; /* max-w-md */
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1rem; /* p-4 */
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* space-y-6 */
+  }
+  
+  .settings-card {
+    border: 1px solid var(--border);
+    box-shadow: var(--card-shadow);
+    background-color: var(--card-background); /* Darker card background */
+    border-radius: 0.5rem; /* Assuming default card rounded corners */
+  }
+  
+  .card-header-padding {
+    padding-bottom: 0.75rem; /* pb-3 */
+    padding-left: 1.5rem; /* common shadcn CardHeader padding */
+    padding-right: 1.5rem; /* common shadcn CardHeader padding */
+    padding-top: 1.5rem; /* common shadcn CardHeader padding */
+  }
+  
+  .card-title {
+    font-size: 1.125rem; /* text-lg */
+    color: var(--foreground);
+  }
+  
+  .card-content-padding {
+    padding-top: 0;
+    padding-bottom: 1.5rem; /* common shadcn CardContent padding */
+    padding-left: 1.5rem; /* common shadcn CardContent padding */
+    padding-right: 1.5rem; /* common shadcn CardContent padding */
+  }
+  
+  .settings-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem; /* space-y-1 */
+  }
+  
+  .settings-item-link,
+  .settings-item-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem; /* p-3 */
+    border-radius: 0.5rem; /* rounded-lg */
+    transition: background-color 0.2s ease-in-out;
+    width: 100%; /* For buttons to take full width */
+    text-align: left; /* For buttons to align text left */
+    background-color: transparent; /* Ensure button background is transparent */
+    border: none; /* Remove default button border */
+    cursor: pointer;
+    color: #f3f4f6;
+  }
+  
+  .settings-item-link:hover,
+  .settings-item-button:hover {
+    background-color: rgba(var(--muted), 0.5); /* hover:bg-muted/50 */
+  }
+  
+  .settings-item-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* space-x-3 */
+  }
+  
+  .settings-icon {
+    width: 1.25rem; /* w-5 */
+    height: 1.25rem; /* h-5 */
+    color: var(--icon-color);
+    padding: 0.25rem; /* Small padding around the icon */
+    border-radius: 0.25rem; /* Slightly rounded corners for the icon background */
+  }
+  
+  .icon-muted {
+    /* This class will now be overridden by .settings-icon for background/color */
+  }
+  
+  .icon-destructive {
+    color: var(--destructive);
+  }
+  
+  .text-foreground-color {
+    color: white;
+  }
+  
+  .text-destructive-color {
+    color: var(--destructive);
+  }
+  
+  .chevron-icon {
+    width: 1rem; /* w-4 */
+    height: 1rem; /* h-4 */
+    color: white;
+  }
+  
+  .app-info-section {
+    text-align: center;
+    color: var(--muted-foreground);
+    font-size: 0.875rem; /* text-sm */
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem; /* space-y-1 */
+  }

@@ -9,7 +9,9 @@
       opacity: 1;
     }
   }
-  
+  a{
+    text-decoration: none;
+  }
   .skeleton {
     border-radius: 6px;
     background-color: #e0e0e0; 

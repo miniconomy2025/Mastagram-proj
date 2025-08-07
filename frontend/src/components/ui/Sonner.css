@@ -9,7 +9,9 @@
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .toast-description {
     color: var(--muted-foreground, #6b7280);
   }

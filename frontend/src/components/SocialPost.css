@@ -317,9 +317,11 @@
 }
 
 .sp-content a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
-  
+a{
+  text-decoration: none;
+}
 .social-post-media {
   position: relative;
 }

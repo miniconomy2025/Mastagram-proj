@@ -9,7 +9,9 @@
     transition: background-color 0.2s ease, color 0.2s ease;
     outline: none;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .badge:focus {
     box-shadow: 0 0 0 2px var(--ring-color, #3b82f6); /* focus:ring-ring */
     outline: none;

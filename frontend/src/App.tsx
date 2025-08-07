@@ -28,9 +28,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const isAuthRoute = !['/login', '/auth/callback'].includes(location.pathname);
 
   return (
-    <div className="flex min-h-screen">
+    <div>
       {isAuthRoute && <Sidebar />}
-      <main className={`flex-1 ${isAuthRoute ? 'lg:ml-64' : ''}`}>
+      <main >
         {children}
       </main>
       {isAuthRoute && <BottomNav />}

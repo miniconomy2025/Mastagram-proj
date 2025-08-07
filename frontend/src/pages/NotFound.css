@@ -1,0 +1,44 @@
+:root {
+    --background-dark: #1a1a1a; /* Consistent dark background */
+    --foreground-light: #f3f4f6; /* Light text for readability */
+    --text-muted: #d1d5db; /* Slightly muted text for paragraphs */
+    --link-color: #6366f1; /* Primary link color */
+    --link-hover-color: #8b5cf6; /* Lighter primary for hover */
+  }
+  
+  .not-found-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--background-dark);
+    color: var(--foreground-light); /* Apply foreground color to the whole container */
+  }
+  
+  .not-found-content {
+    text-align: center;
+  }
+  
+  .not-found-title {
+    font-size: 2.25rem; /* text-4xl */
+    font-weight: bold;
+    margin-bottom: 1rem; /* mb-4 */
+  }
+  
+  .not-found-message {
+    font-size: 1.25rem; /* text-xl */
+    color: var(--text-muted);
+    margin-bottom: 1rem; /* mb-4 */
+  }
+  a{
+    text-decoration: none;
+  }
+  .not-found-link {
+    color: var(--link-color);
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
+  }
+  
+  .not-found-link:hover {
+    color: var(--link-hover-color);
+  }

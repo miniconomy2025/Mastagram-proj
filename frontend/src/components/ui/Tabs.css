@@ -8,7 +8,9 @@
     background-color: #27272a; /* Dark background */
     color: #9ca3af; /* Muted gray text */
   }
-  
+  a{
+    text-decoration: none;
+  }
   .tabs-trigger {
     display: inline-flex;
     align-items: center;

@@ -8,7 +8,9 @@
   .alert-overlay[data-state="closed"] {
     animation: fade-out 0.2s ease-in;
   }
-  
+  a{
+    text-decoration: none;
+  }
   .alert-content {
     position: fixed;
     left: 50%;

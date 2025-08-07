@@ -1,0 +1,159 @@
+/* Login.css */
+
+/* Dark Mode Defaults (always on) */
+:root {
+    --background-dark-primary: #222; /* Darker background for the page */
+    --background-dark-secondary: #2a2a2a; /* Slightly lighter for the card */
+    --foreground: #f3f4f6; /* Light text */
+    --primary: #6366f1; /* Purple/Blue primary */
+    --primary-foreground: #ffffff;
+    --muted-foreground: #d1d5db; /* Lighter grey for muted text */
+    --border-dark: #444; /* Darker border for elements */
+    --accent-dark: #3a3a3a; /* Accent for hover states in dark mode */
+    --signup-link-color: #ff6347; /* Red/Orange for the "Sign up" link */
+  
+    --font-heading: 'Inter', sans-serif;
+  }
+  
+  /* Keyframe for spinner animation */
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .login-page-container {
+    min-height: 100vh;
+    background: var(--background-dark-primary); /* Use the darker primary background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem; /* p-4 */
+  }
+  
+  .login-content-wrapper {
+    width: 100%;
+    max-width: 448px; /* max-w-md */
+    display: flex;
+    flex-direction: column;
+    gap: 2rem; /* space-y-8 */
+  }
+  
+  .login-header-section {
+    text-align: center;
+  }
+  
+  .login-icon-wrapper {
+    width: 1rem; /* w-16 */
+    height: 1rem; /* h-16 */
+    margin-left: auto;
+    margin-right: auto;
+    background: linear-gradient(to right, #8a2be2, #ff69b4); /* Purple to Pink gradient as in the image */
+    border-radius: 9999px; /* rounded-full */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem; /* mb-4 */
+  }
+  
+  .login-icon {
+    width: 3rem;
+    height: 3rem; 
+    color: linear-gradient(to right, #8a2be2, #ff69b4);
+  }
+  a{
+    text-decoration: none;
+  }
+  
+  .login-title {
+    font-family: var(--font-heading);
+    font-weight: bold;
+    font-size: 1.875rem;
+    color: var(--foreground);
+  }
+  
+  .login-subtitle {
+    color: var(--muted-foreground);
+    margin-top: 0.5rem; /* mt-2 */
+  }
+  
+  .login-card {
+    border: 1px solid var(--border-dark); /* Use darker border */
+    border-radius: 0.5rem; /* Assuming default card rounded corners */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08); /* shadow-card */
+    background-color: var(--background-dark-secondary); /* Lighter dark background for card */
+    color: var(--foreground); /* Card text color */
+  }
+  
+  .login-card-header {
+    padding: 1.5rem; /* p-6, common for shadcn CardHeader */
+    text-align: center;
+  }
+  
+  .login-card-title {
+    font-size: 1.5rem; /* text-2xl, common for shadcn CardTitle */
+    font-weight: 600;
+    color: var(--foreground);
+  }
+  
+  .login-card-description {
+    color: var(--muted-foreground);
+    font-size: 0.875rem; /* text-sm, common for shadcn CardDescription */
+    margin-top: 0.25rem; /* common spacing */
+  }
+  
+  .login-card-content {
+    padding: 1.5rem; /* p-6, common for shadcn CardContent */
+    padding-top: 0; /* To counteract default CardContent padding-top */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .google-login-button {
+    width: 50%; /* w-half, assuming this means 50% */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem; /* gap-2 */
+    border: 1px solid var(--border-dark); /* Use darker border */
+    background-color: #fff; /* White background as in image */
+    color: #333; /* Darker text for the button */
+    padding: 0.625rem 1rem; /* Adjust padding for button size */
+    border-radius: 0.375rem; /* Assuming default button rounded corners */
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  }
+  
+  .google-login-button:hover:not(:disabled) {
+    background-color: #f0f0f0; /* Slightly darker white on hover */
+  }
+  
+  .google-login-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  
+  .signup-text-wrapper {
+    margin-top: 1.5rem; /* mt-6 */
+    text-align: center;
+    width: 100%;
+  }
+  
+  .signup-text {
+    color: var(--muted-foreground);
+  }
+  
+  .signup-link {
+    color: var(--signup-link-color); /* Use the new red/orange color */
+    transition: color 0.2s ease-in-out;
+    font-weight: 500;
+  }
+  
+  .signup-link:hover {
+    color: #ff4500; /* A slightly darker red/orange on hover */
+  }

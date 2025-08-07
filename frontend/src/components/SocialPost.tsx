@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Heart, MessageCircle, Share, MoreHorizontal,
   Bookmark, UserPlus, UserMinus
@@ -15,22 +15,37 @@ interface SocialPostProps {
 }
 
 export const SocialPost = ({ post }: SocialPostProps) => {
-  const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount || 0);
-  const { followUser, unfollowUser, savePost, unsavePost, isFollowing, isSaved } = useSocialActions();
+
+  const {
+    followUser, unfollowUser, savePost, unsavePost,
+    isFollowing, isSaved,
+    likePost, unlikePost, isLiked
+  } = useSocialActions();
+
   const [isPostSaved, setIsPostSaved] = useState(isSaved(post.id));
   const [userFollowing, setUserFollowing] = useState(isFollowing(post.author.id));
+  
+  const [isPostLiked, setIsPostLiked] = useState(isLiked(post.id));
 
-  // Sanitize and parse HTML content
+  useEffect(() => {
+    setIsPostLiked(isLiked(post.id));
+  }, [isLiked, post.id]);
+
+
   const cleanHtml = DOMPurify.sanitize(post.content);
   const parsedContent = parse(cleanHtml);
 
-  // Extract hashtags from content
   const hashtags = extractHashtags(post.content);
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+  const handleLike = async () => {
+    if (isPostLiked) {
+      await unlikePost(post.id);
+      setLikesCount(prev => prev - 1);
+    } else {
+      await likePost(post.id);
+      setLikesCount(prev => prev + 1);
+    }
   };
 
   const handleSave = async () => {
@@ -130,13 +145,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
 
         <div className="social-post-header-actions">
-          <button
-            onClick={handleFollow}
-            className={`social-post-follow-btn ${userFollowing ? 'following' : ''}`}
-          >
-            {userFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-            {userFollowing ? 'Following' : 'Follow'}
-          </button>
           <button className="social-post-more-btn">
             <MoreHorizontal className="w-5 h-5" />
           </button>
@@ -162,8 +170,8 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
       <div className="sp-actions">
         <div className="sp-left-actions">
-          <button onClick={handleLike} className={`sp-icon-btn ${isLiked ? 'liked' : ''}`}>
-            <Heart className={isLiked ? 'filled' : ''} />
+          <button onClick={handleLike} className={`sp-icon-btn ${isPostLiked ? 'liked' : ''}`}>
+            <Heart className={isPostLiked ? 'filled' : ''} />
             <span>{likesCount}</span>
           </button>
           <Link to={`/post/${post.id}`} className="sp-icon-btn">

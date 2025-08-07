@@ -13,6 +13,9 @@
   .custom-input::placeholder {
     color: #888;
   }
+  a{
+    text-decoration: none;
+  }
   
   .custom-input:focus-visible {
     outline: none;

@@ -8,8 +8,11 @@
   border-right: 1px solid var(--border);
   padding: 1rem; 
   display: none; 
+  z-index:999;
 }
-
+a{
+  text-decoration: none;
+}
 @media (min-width: 1024px) {
   .sidebar {
     display: block; 
@@ -88,7 +91,6 @@
 }
 
 .create-post-button {
-  width: 100%; /* w-full */
   background: linear-gradient(to top right, #ec4899, #f59e0b); /* bg-gradient-to-tr from-pink-500 to-yellow-400 */
   color: white; /* text-white */
   font-weight: 600; /* font-semibold */

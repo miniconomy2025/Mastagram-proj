@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useApiMutation, useApiQuery } from '@/lib/api';
 import { Label } from '@/components/ui/label';
-
+import './ProfileEdit.css'; 
 
 
 const ProfileEdit = () => {
@@ -26,8 +26,8 @@ const ProfileEdit = () => {
   type ProfileResponse = {
     username?: string;
     email?: string;
-    displayName?: string;     
-    name?: string;             // fallback when backend sends `name`
+    displayName?: string;    
+    name?: string;            // fallback when backend sends `name`
     avatarUrl?: string;
     bio?: string;
   };
@@ -119,17 +119,17 @@ const ProfileEdit = () => {
 
   if (isProfileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="loading-state-container">
         <span>Loading profile...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="profile-edit-container">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-md mx-auto flex items-center justify-between p-4">
+      <header className="header-sticky">
+        <div className="header-content">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -137,7 +137,7 @@ const ProfileEdit = () => {
           >
             <ArrowLeft className="w-6 h-6" />
           </Button>
-          <h1 className="font-heading font-bold text-xl text-foreground">
+          <h1 className="header-title">
             Edit Profile
           </h1>
           <Button 
@@ -147,7 +147,7 @@ const ProfileEdit = () => {
             disabled={isLoading}
           >
             {isLoading ? (
-              <span className="animate-spin">↻</span>
+              <span className="spinner">↻</span>
             ) : (
               <Check className="w-6 h-6" />
             )}
@@ -155,27 +155,27 @@ const ProfileEdit = () => {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto p-6 space-y-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <main className="main-content">
+        <form onSubmit={handleSubmit} className="form-section">
           {/* Avatar Section */}
-          <div className="flex flex-col items-center">
-            <div className="relative mb-4">
+          <div className="avatar-section">
+            <div className="avatar-wrapper">
               <img 
                 src={formData.avatarPreview} 
                 alt="Profile" 
-                className="w-24 h-24 rounded-full border-2 border-primary object-cover"
+                className="avatar-image"
               />
               <label 
                 htmlFor="avatar-upload"
-                className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer"
+                className="avatar-upload-label"
               >
-                <Camera className="w-4 h-4 text-white" />
+                <Camera className="camera-icon" />
                 <input
                   id="avatar-upload"
                   type="file"
                   accept="image/*"
                   onChange={handleAvatarChange}
-                  className="hidden"
+                  className="hidden-input"
                   ref={fileInputRef}
                 />
               </label>
@@ -183,19 +183,19 @@ const ProfileEdit = () => {
           </div>
 
           {/* Form Fields */}
-          <div className="space-y-4">
-            <div>
+          <div className="form-fields-group">
+            <div className="form-field">
               <Label htmlFor="displayName">Display Name</Label>
               <Input
                 id="displayName"
                 name="displayName"
                 value={formData.displayName}
                 onChange={handleChange}
-                className="mt-1"
+                className="input-field"
               />
             </div>
 
-            <div>
+            <div className="form-field">
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
@@ -203,14 +203,14 @@ const ProfileEdit = () => {
                 value={formData.username}
                 readOnly
                 disabled
-                className="mt-1 opacity-60 cursor-not-allowed"
+                className="input-field"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="username-hint">
                 Username cannot be changed.
               </p>
             </div>
 
-            <div>
+            <div className="form-field">
               <Label htmlFor="bio">Bio</Label>
               <Textarea
                 id="bio"
@@ -218,15 +218,15 @@ const ProfileEdit = () => {
                 value={formData.bio}
                 onChange={handleChange}
                 rows={3}
-                className="mt-1"
+                className="input-field"
               />
             </div>
           </div>
 
-          <div className="pt-4">
+          <div className="submit-button-wrapper">
             <Button 
               type="submit" 
-              className="w-full"
+              className="submit-button"
               disabled={isLoading}
             >
               {isLoading ? "Saving..." : "Save Changes"}

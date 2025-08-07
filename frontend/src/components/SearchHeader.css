@@ -6,7 +6,9 @@
     backdrop-filter: blur(16px);
     border-bottom: 1px solid hsl(var(--border));
   }
-  
+  a{
+    text-decoration: none;
+  }
   .search-container {
     max-width: 28rem; /* 448px */
     margin: 0 auto;

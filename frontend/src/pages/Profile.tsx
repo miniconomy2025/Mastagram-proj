@@ -6,7 +6,6 @@ import {
   Grid3X3,
   Bookmark,
   Heart,
-  Camera,
   ChevronLeft,
   Loader2,
   UserMinus,
@@ -18,6 +17,7 @@ import './Profile.css';
 import DOMPurify from 'dompurify';
 import parse from 'html-react-parser';
 import { FederatedPost } from '@/types/federation';
+import { useSocialActions } from '@/hooks/use-social-actions';
 
 type ApiUser = {
   username?: string;
@@ -169,7 +169,10 @@ const Profile = () => {
   const [connectionsTab, setConnectionsTab] = useState<ListTab>('followers');
   const [showConnections, setShowConnections] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isFollowing, setIsFollowing] = useState(false);
+
+  // Use the social actions hook and a state for the follow button
+  const { followUser, unfollowUser, isFollowing } = useSocialActions();
+  const [isCurrentlyFollowing, setIsCurrentlyFollowing] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver>();
@@ -189,6 +192,25 @@ const Profile = () => {
     loadMore: loadMoreFollowing
   } = usePaginatedConnections(federatedHandle, 'following');
 
+  // Set the initial follow state when the profile data loads
+  useEffect(() => {
+    if (federatedProfileQuery.data) {
+      setIsCurrentlyFollowing(isFollowing(federatedProfileQuery.data.id));
+    }
+  }, [federatedProfileQuery.data, isFollowing]);
+
+  // Handler function for the follow button
+  const handleFollow = useCallback(async () => {
+    const profileData = federatedProfileQuery.data;
+    if (!profileData) return;
+
+    if (isCurrentlyFollowing) {
+      await unfollowUser(profileData.id, profileData.handle);
+    } else {
+      await followUser(profileData.id, profileData.handle);
+    }
+  }, [isCurrentlyFollowing, federatedProfileQuery.data, followUser, unfollowUser]);
+
   const userPosts = userPostsQuery.data?.items ?? [];
   const userData = {
     id: federatedProfileQuery.data?.id || '1',
@@ -202,7 +224,9 @@ const Profile = () => {
     verified: true
   };
 
-  const mappedList = (connectionsTab === 'followers' ? followers : following).map(user => ({
+  const mappedList = (connectionsTab === 'followers' ? followers : following).filter(user => user !== null && user !== undefined)
+  .map(user => ({
+
     id: user.id,
     username: user.handle,
     display_name: user.name,
@@ -365,9 +389,6 @@ const Profile = () => {
                         {userData.display_name.charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <button aria-label="Change avatar" className="change-avatar-button">
-                      <Camera size={16} className="text-white" />
-                    </button>
                   </div>
                   <div className="profile-stats">
                     <div className="stats-list">
@@ -399,11 +420,12 @@ const Profile = () => {
                     {!isViewingOwnProfile && (
                       <div className="profile-header-actions">
                         <button
-                          onClick={() => setIsFollowing(!isFollowing)}
-                          className={`profile-follow-btn ${isFollowing ? 'following' : ''}`}
+                          // Use the new handleFollow function here
+                          onClick={handleFollow}
+                          className={`profile-follow-btn ${isCurrentlyFollowing ? 'following' : ''}`}
                         >
-                          {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                          {isFollowing ? 'Following' : 'Follow'}
+                          {isCurrentlyFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                          {isCurrentlyFollowing ? 'Following' : 'Follow'}
                         </button>
                       </div>
                     )}

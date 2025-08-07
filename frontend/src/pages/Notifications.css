@@ -6,11 +6,7 @@
   padding-bottom: 5rem;
 }
 
-@media (min-width: 1024px) {
-  .notifications-container {
-    padding-bottom: 0;
-  }
-}
+
 
 .notifications-header {
   position: sticky;
@@ -20,7 +16,14 @@
   backdrop-filter: blur(12px);
   border-bottom: 1px solid hsl(var(--border));
 }
+@media (min-width: 1024px) {
+  .notifications-container {
+    padding-bottom: 0rem;
+    padding-left: 15rem;
+  }
 
+
+}
 .notifications-header-content {
   max-width: 28rem;
   margin: 0 auto;
@@ -178,7 +181,9 @@
   color: hsl(var(--heart-color));
   fill: currentColor;
 }
-
+a{
+  text-decoration: none;
+}
 .notification-icon.comment {
   color: hsl(var(--primary));
 }

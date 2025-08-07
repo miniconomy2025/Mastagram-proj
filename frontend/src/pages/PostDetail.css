@@ -202,7 +202,9 @@
 .post-detail-like-btn.liked svg {
   fill: currentColor;
 }
-
+a{
+  text-decoration: none;
+}
 .post-detail-comment-count {
   display: flex;
   align-items: center;
