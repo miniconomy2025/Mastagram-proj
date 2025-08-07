@@ -48,7 +48,7 @@ const Notifications = () => {
 
   useEffect(() => {
     // You would use an actual API endpoint here
-    const eventSource = new EventSource('http://localhost:3000/api/notifications/subscribe');
+    const eventSource = new EventSource('https://todo-secure-list.xyz/api/notifications/subscribe');
 
     eventSource.onopen = () => {
       console.log('SSE connection opened.');
