@@ -29,7 +29,7 @@ export interface FeedData{
     hashtags?: string[];
     content?: string;
     media?: Media[];
-    createdAt: Date;
+    createdAt: number;
 }
 
 interface FeedResponse {
@@ -136,7 +136,7 @@ export class FeedController {
                 feedType,
                 caption: caption?.trim(),
                 hashtags: hashtags ? hashtags.trim().split(',').map(tag => tag.trim()) : [],
-                createdAt: new Date()
+                createdAt: (new Date()).getTime(),
             };
 
             if (feedType === 'media') {
@@ -147,7 +147,7 @@ export class FeedController {
 
             if ((feedData.media && feedData.media.length > 0) || feedData.content) {
                 await saveFeedData(feedData);
-                await redisClient.zadd(`feed:user:${userId}`, feedData.createdAt.getTime(), feedData.feedId);
+                await redisClient.zadd(`feed:user:${userId}`, feedData.createdAt, feedData.feedId);
                 await redisClient.set(`post:${feedData.feedId}`, JSON.stringify(feedData), 'EX', 60 * 30);
                 
                 // Invalidate the user's my-posts cache
