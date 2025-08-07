@@ -27,6 +27,7 @@ export interface FederatedPost {
   repliesCount?: number;
   reblogsCount?: number;
   attachment?: MediaAttachment;
+  likedByMe: boolean
 }
 
 export interface MediaAttachment {
@@ -44,4 +45,5 @@ export interface User {
   follower_count: number;
   following_count: number;
   created_at: string;
+  followedByMe: boolean
 }
