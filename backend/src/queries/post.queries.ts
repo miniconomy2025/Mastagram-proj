@@ -14,6 +14,14 @@ export async function findPostById(postId: string) {
     return post;
 }
 
+export async function countPostsByAuthor(username: string) {
+    const posts = collection();
+    
+    return await posts.countDocuments({
+        author: username,
+    });;
+}
+
 export async function findPostsByAuthor(username: string, limit: number, cursor: number = Number.MAX_SAFE_INTEGER) {
     const posts = collection();
     
