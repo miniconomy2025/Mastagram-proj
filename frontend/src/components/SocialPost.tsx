@@ -145,13 +145,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
 
         <div className="social-post-header-actions">
-          <button
-            onClick={handleFollow}
-            className={`social-post-follow-btn ${userFollowing ? 'following' : ''}`}
-          >
-            {userFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-            {userFollowing ? 'Following' : 'Follow'}
-          </button>
           <button className="social-post-more-btn">
             <MoreHorizontal className="w-5 h-5" />
           </button>
