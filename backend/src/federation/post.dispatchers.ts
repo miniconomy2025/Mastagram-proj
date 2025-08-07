@@ -9,6 +9,7 @@ export function postToNote<T>(ctx: Context<T>, post: WithId<Post>) {
     
     return new Note({
         id: url,
+        url: new URL(`${process.env.FRONTEND_URL}/post/${encodeURIComponent(url.href)}`),
         attribution: ctx.getActorUri(post.author),
         to: PUBLIC_COLLECTION,
         content: `${post.caption ?? '\n'} ${post.content ?? ''}`,

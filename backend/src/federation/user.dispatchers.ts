@@ -22,7 +22,7 @@ async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
         name: user.name,
         summary: user.bio,
         published: Temporal.Instant.fromEpochMilliseconds(user.createdAt),
-        url: url,
+        url: new URL(`${process.env.FRONTEND_URL}/profile/${user.username}@todo-secure-list.xyz`),
         inbox: ctx.getInboxUri(user.username),
         outbox: ctx.getOutboxUri(user.username),
         followers: ctx.getFollowersUri(user.username),
