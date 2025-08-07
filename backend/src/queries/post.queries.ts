@@ -10,7 +10,7 @@ function collection() {
 export async function findPostById(postId: string) {
     const posts = collection();
     
-    const post = await posts.findOne(new ObjectId(postId));
+    const post = await posts.findOne({ feedId: postId });
     return post;
 }
 

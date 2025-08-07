@@ -38,12 +38,10 @@ export function postToCreate<T>(ctx: Context<T>, post: WithId<Post>) {
     const note = postToNote(ctx, post);
 
     return new Create({
-        id: new URL('#activity', note.id ?? undefined),
+        id: new URL(`${note.id}/activity`),
+        actor: ctx.getActorUri(post.author),
         object: note,
-        actors: note.attributionIds,
-        tos: note.toIds,
-        ccs: note.ccIds,
-        published: note.published,
+        to: new URL("https://www.w3.org/ns/activitystreams#Public"),
     });
 }
 
