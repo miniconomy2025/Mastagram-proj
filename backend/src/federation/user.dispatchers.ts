@@ -4,9 +4,9 @@ import type { User } from "../models/user.models.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import logger from "../logger.ts";
 import { PAGINATION_LIMIT } from "./federation.ts";
-import { findFollowersByUsername } from "../queries/follower.queries.ts";
-import { findFollowingByUsername } from "../queries/following.queries.ts";
-import { findPostsByAuthor } from "../queries/post.queries.ts";
+import { countFollowersByUsername, findFollowersByUsername } from "../queries/follower.queries.ts";
+import { countFollowingByUsername, findFollowingByUsername } from "../queries/following.queries.ts";
+import { countPostsByAuthor, findPostsByAuthor } from "../queries/post.queries.ts";
 import type { Post } from "../models/post.models.ts";
 import type { WithId } from "mongodb";
 import { postToNote } from "./post.dispatchers.ts";
@@ -123,6 +123,8 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
         };
     }).setFirstCursor(async () => {
         return '' + Number.MAX_SAFE_INTEGER;
+    }).setCounter(async (_ctx, identifier) => {
+        return await countFollowersByUsername(identifier);
     });
 
     federation.setFollowingDispatcher("/users/{identifier}/following", async (_ctx, identifier, cursorString) => {
@@ -144,6 +146,8 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
         };
     }).setFirstCursor(async () => {
         return '' + Number.MAX_SAFE_INTEGER;
+    }).setCounter(async (_ctx, identifier) => {
+        return await countFollowingByUsername(identifier);
     });
 
     federation.setOutboxDispatcher("/users/{identifier}/outbox", async (ctx, identifier, cursorString) => {
@@ -165,5 +169,7 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
         };
     }).setFirstCursor(async () => {
         return '' + Number.MAX_SAFE_INTEGER;
+    }).setCounter(async (_ctx, identifier) => {
+        return await countPostsByAuthor(identifier);
     });
 }
