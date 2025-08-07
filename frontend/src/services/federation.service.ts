@@ -1,35 +1,26 @@
+import { api } from "@/lib/api";
 import { FederatedPost, FederatedUser, PaginatedResponse } from "@/types/federation";
 
-const API_BASE_URL = 'https://todo-secure-list.xyz/api/federation';
+const API_BASE_URL = '/federation'; // Using relative path since base URL is already in your api config
 
 export const getFollowing = async (
   userId: string,
   page?: string
 ): Promise<PaginatedResponse<FederatedUser>> => {
   try {
-
-    const url = new URL(`${API_BASE_URL}/users/${userId}/following`);
-    if (page) url.searchParams.append('page', page);
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const url = `/users/${encodeURIComponent(userId)}/following`;
+    const params = page ? { page } : undefined;
+    
+    const data = await api.get<PaginatedResponse<FederatedUser>>(url, { params });
+    
     return {
-      items: data.items,
+      items: data.items.filter((item): item is FederatedUser => item !== null),
       total: data.total,
       next: data.next,
     };
   } catch (error) {
     console.error('Error fetching following:', error);
-    throw error;
+    throw new Error('Failed to fetch following list');
   }
 };
 
@@ -38,29 +29,19 @@ export const getFollowers = async (
   page?: string
 ): Promise<PaginatedResponse<FederatedUser>> => {
   try {
-
-    const url = new URL(`${API_BASE_URL}/users/${userId}/following`);
-    if (page) url.searchParams.append('page', page);
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const url = `/users/${encodeURIComponent(userId)}/followers`;
+    const params = page ? { page } : undefined;
+    
+    const data = await api.get<PaginatedResponse<FederatedUser>>(url, { params });
+    
     return {
-      items: data.items,
+      items: data.items.filter((item): item is FederatedUser => item !== null),
       total: data.total,
       next: data.next,
     };
   } catch (error) {
-    console.error('Error fetching following:', error);
-    throw error;
+    console.error('Error fetching followers:', error);
+    throw new Error('Failed to fetch followers list');
   }
 };
 
@@ -69,29 +50,19 @@ export const getPosts = async (
   cursor?: string
 ): Promise<PaginatedResponse<FederatedPost>> => {
   try {
-    const url = new URL(`${API_BASE_URL}/users/${userId}/posts`);
-    if (cursor) url.searchParams.append('cursor', cursor);
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const url = `/users/${encodeURIComponent(userId)}/posts`;
+    const params = cursor ? { cursor } : undefined;
+    
+    const data = await api.get<PaginatedResponse<FederatedPost>>(url, { params });
     
     return {
-      items: data.items.filter((item: any) => item !== null) as FederatedPost[],
-      total: data.count,
+      items: data.items.filter((item): item is FederatedPost => item !== null),
+      total: data.total,
       next: data.next,
     };
   } catch (error) {
-    console.error('Error fetching posts:', error);
-    throw error;
+    console.error('Error fetching user posts:', error);
+    throw new Error('Failed to fetch user posts');
   }
 };
 
@@ -99,28 +70,18 @@ export const getFeeds = async (
   cursor?: string
 ): Promise<PaginatedResponse<FederatedPost>> => {
   try {
-    const url = new URL(`${API_BASE_URL}/me/following/posts`);
-    if (cursor) url.searchParams.append('cursor', cursor);
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const url = '/federation/me/following/posts';
+    const params = cursor ? { cursor } : undefined;
+    
+    const data = await api.get<PaginatedResponse<FederatedPost>>(url, { params });
     
     return {
-      items: data.items.filter((item: any) => item !== null) as FederatedPost[],
-      total: data.count,
+      items: data.items.filter((item): item is FederatedPost => item !== null),
+      total: data.total,
       next: data.next,
     };
   } catch (error) {
-    console.error('Error fetching posts:', error);
-    throw error;
+    console.error('Error fetching feed:', error);
+    throw new Error('Failed to fetch feed');
   }
 };

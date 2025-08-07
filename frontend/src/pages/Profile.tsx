@@ -143,8 +143,7 @@ const useProfileData = () => {
 
   const isViewingOwnProfile = !routeUsername;
   const federatedHandle = isViewingOwnProfile
-    ? apiUser?.username ? `@${apiUser.displayName}@mastodon.social` : undefined
-    : `@${routeUsername}`;
+  ? apiUser?.username ? `@${apiUser.username}@todo-secure-list.xyz` : undefined    : `@${routeUsername}`;
 
   return {
     apiUser,
