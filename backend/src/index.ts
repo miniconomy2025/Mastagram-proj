@@ -33,8 +33,19 @@ app.use(cors({
   credentials: true,
 }));
 
+app.set('trust proxy', true);  
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+  const originalHost = req.headers['x-original-host'];
+  if (originalHost) {
+    const host = Array.isArray(originalHost) ? originalHost[0] : originalHost;
+    req.headers.host = host;  
+  } 
+  next();
+});
 
 app.use(passport.initialize());
 

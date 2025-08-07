@@ -63,6 +63,21 @@ export class InfrastructureStack extends cdk.Stack {
       ],
     });
 
+    // CloudFront Distribution for user content
+    const storageDistribution = new cloudfront.Distribution(this, 'MastergramStorageDistribution', {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(contentStorageBucket, {
+          originAccessLevels: [cloudfront.AccessLevel.READ],
+        }),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED, 
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS, 
+        cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
+      }, 
+      enabled: true,
+      comment: 'CDN for Mastergram user-generated content',
+    });
+
     // Create a VPC for the EC2 instance
     const vpc = new ec2.Vpc(this, 'MastergramVpc', {
       maxAzs: 2,
