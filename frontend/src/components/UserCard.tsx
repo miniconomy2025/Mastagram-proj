@@ -1,24 +1,18 @@
-import { useState, useEffect } from 'react';
-import { UserPlus, UserMinus, Users } from 'lucide-react';
+import { useState } from 'react';
+import { UserPlus, UserMinus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './UserCard.css';
 import { User } from '@/types/federation';
 import { useSocialActions } from '@/hooks/use-social-actions';
-import './SocialPost.css';
 
 interface UserCardProps {
   user: User;
 }
 
 export const UserCard = ({ user }: UserCardProps) => {
-  const { followUser, unfollowUser, isFollowing } = useSocialActions();
-  const [isCurrentlyFollowing, setIsCurrentlyFollowing] = useState(false);
+  const { followUser, unfollowUser } = useSocialActions();
 
-  useEffect(() => {
-    if (user && user.id) {
-      setIsCurrentlyFollowing(isFollowing(user.id));
-    }
-  }, [user, isFollowing]);
+  const [isCurrentlyFollowing, setIsCurrentlyFollowing] = useState(user.followedByMe);
 
   const handleFollow = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,19 +28,21 @@ export const UserCard = ({ user }: UserCardProps) => {
   };
 
   return (
-    // The entire card is now a clickable Link
     <Link to={`/profile/${user.username.replace('@', '')}`} className="user-card-link">
       <div className="user-card">
         <div className="user-card-header">
           <div className="avatar-wrapper">
-            <img
-              src={user.avatar_url}
-              alt={user.username}
-              className="avatar-img"
-            />
-            <div className="avatar-icon">
-              <Users className="icon-inner" />
-            </div>
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.username}
+                className="avatar-img"
+              />
+            ) : (
+              <div className="profile-post-avatar">
+                {user.display_name.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
 
           <div className="user-info">
@@ -60,7 +56,6 @@ export const UserCard = ({ user }: UserCardProps) => {
                 </p>
               </div>
               
-              {/* The follow button is now interactive */}
               <button
                 onClick={handleFollow}
                 className={`follow-button ${isCurrentlyFollowing ? 'following' : ''}`}

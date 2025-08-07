@@ -5,9 +5,10 @@ import './SearchHeader.css';
 interface SearchHeaderProps {
   query: string;
   onQueryChange: (query: string) => void;
+  isLoading: boolean;
 }
 
-export const SearchHeader = ({ query, onQueryChange }: SearchHeaderProps) => {
+export const SearchHeader = ({ query, onQueryChange, isLoading }: SearchHeaderProps) => {
   return (
     <div className="search-header">
       <div className="search-container">
@@ -28,7 +29,11 @@ export const SearchHeader = ({ query, onQueryChange }: SearchHeaderProps) => {
 
           {query && (
             <div className="search-indicator">
-              <div className="search-pulse"></div>
+              {isLoading ? (
+                <div className="spinner"></div> 
+              ) : (
+                <div className="search-pulse"></div>
+              )}
             </div>
           )}
         </div>

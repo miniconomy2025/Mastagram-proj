@@ -1,21 +1,20 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/lib/api';
-
-let savedPosts = new Set<string>();
+import { api } from '@/lib/api'; 
+import { FederatedPost } from '@/types/federation';
 
 export const useSocialActions = () => {
   const { toast } = useToast();
 
   const [likedPosts, setLikedPosts] = useState(new Set<string>());
   const [followingUsers, setFollowingUsers] = useState(new Set<string>());
+  
+  const [savedPosts, setSavedPosts] = useState(new Set<string>());
 
   const followUser = useCallback(async (userId: string, username: string) => {
     try {
       await api.post(`/follow/${encodeURIComponent(username)}`);
-
       setFollowingUsers(prev => new Set(prev).add(username));
-
       toast({
         title: "Following",
         description: `You are now following ${username}`,
@@ -33,13 +32,11 @@ export const useSocialActions = () => {
   const unfollowUser = useCallback(async (userId: string, username: string) => {
     try {
       await api.delete(`/follow/${encodeURIComponent(username)}`);
-
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         newSet.delete(username);
         return newSet;
       });
-
       toast({
         title: "Unfollowed",
         description: `You unfollowed ${username}`,
@@ -56,11 +53,10 @@ export const useSocialActions = () => {
 
   const savePost = useCallback(async (postId: string) => {
     try {
-      savedPosts.add(postId);
+      setSavedPosts(prev => new Set(prev).add(postId));
       toast({
         title: "Post saved",
         description: "Post added to your saved collection",
-
       });
     } catch (error) {
       toast({
@@ -73,7 +69,11 @@ export const useSocialActions = () => {
 
   const unsavePost = useCallback(async (postId: string) => {
     try {
-      savedPosts.delete(postId);
+      setSavedPosts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(postId);
+        return newSet;
+      });
       toast({
         title: "Post removed",
         description: "Post removed from saved collection",
@@ -133,7 +133,7 @@ export const useSocialActions = () => {
 
   const isSaved = useCallback((postId: string) => {
     return savedPosts.has(postId);
-  }, []);
+  }, [savedPosts]);
 
   const isLiked = useCallback((postId: string) => {
     return likedPosts.has(postId);
@@ -148,6 +148,7 @@ export const useSocialActions = () => {
     unlikePost,
     isFollowing,
     isSaved,
-    isLiked
+    isLiked,
+    likedPosts,
   };
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ArrowLeft,
@@ -10,6 +10,20 @@ import {
 } from 'lucide-react';
 import './Notifications.css';
 
+// The Notification interface should match the data structure from your backend
+// The backend `NotificationController` defines this:
+// type: 'like' | 'follow' | 'comment';
+// targetId: string;
+// userId: string;
+// createdAt: Date;
+interface BackendNotification {
+  type: 'like' | 'comment' | 'follow';
+  targetId: string; // Corresponds to postId for likes/comments, or userId for follows
+  userId: string; // The user who performed the action
+  createdAt: string;
+}
+
+// We'll map the backend data to this richer frontend interface
 interface Notification {
   id: string;
   type: 'like' | 'comment' | 'follow' | 'mention';
@@ -26,62 +40,56 @@ interface Notification {
   read: boolean;
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'like',
-    user: {
-      username: 'mike_creates',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50'
-    },
-    post: {
-      id: '1',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100'
-    },
-    timestamp: '2m ago',
-    read: false
-  },
-  {
-    id: '2',
-    type: 'comment',
-    user: {
-      username: 'mike_creates',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50'
-    },
-    content: 'Amazing shot! What camera did you use?',
-    post: {
-      id: '1',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100'
-    },
-    timestamp: '5m ago',
-    read: false
-  },
-  {
-    id: '3',
-    type: 'follow',
-    user: {
-      username: 'alex_dev',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50'
-    },
-    timestamp: '1h ago',
-    read: true
-  },
-  {
-    id: '4',
-    type: 'mention',
-    user: {
-      username: 'emma_design',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50'
-    },
-    content: 'Check out this amazing work by @johndoe!',
-    timestamp: '3h ago',
-    read: true
-  }
-];
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  // CHANGED: Initial state is now an empty array, populated by the SSE stream
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState('all');
+
+  useEffect(() => {
+    // You would use an actual API endpoint here
+    const eventSource = new EventSource('http://localhost:3000/api/notifications/subscribe');
+
+    eventSource.onopen = () => {
+      console.log('SSE connection opened.');
+    };
+
+    eventSource.onmessage = (event) => {
+      // In a real application, you would fetch full user and post data here
+      // This is a simplified mock of how you might process the incoming data
+      const newNotificationData: BackendNotification = JSON.parse(event.data);
+      console.log('New notification received:', newNotificationData);
+      
+      const newNotification: Notification = {
+        id: newNotificationData.targetId, // Use targetId for uniqueness
+        type: newNotificationData.type,
+        user: {
+          username: newNotificationData.userId, // Map userId from backend
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50' // Placeholder avatar
+        },
+        content: newNotificationData.type === 'comment' ? 'A new comment' : undefined, // Placeholder content
+        post: {
+            id: newNotificationData.targetId,
+            image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100' // Placeholder image
+        },
+        timestamp: 'Just now',
+        read: false
+      };
+      
+      setNotifications(prev => [newNotification, ...prev]);
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE Error:', error);
+      eventSource.close();
+    };
+
+    // Cleanup function to close the SSE connection on component unmount
+    return () => {
+      eventSource.close();
+      console.log('SSE connection closed.');
+    };
+  }, []);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -121,6 +129,11 @@ const Notifications = () => {
     );
   };
 
+  // NEW: Function to mark all notifications as read
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+  };
+
   const filteredNotifications = notifications.filter(notif => {
     if (activeTab === 'all') return true;
     if (activeTab === 'unread') return !notif.read;
@@ -136,7 +149,10 @@ const Notifications = () => {
             <ArrowLeft style={{ width: '1.5rem', height: '1.5rem' }} />
           </Link>
           <h1 className="notifications-title">Notifications</h1>
-          <button className="notifications-mark-read">
+          <button 
+            className="notifications-mark-read"
+            onClick={markAllAsRead} // NEW: onClick handler
+          >
             Mark all read
           </button>
         </div>

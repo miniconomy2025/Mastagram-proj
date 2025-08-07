@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Heart, MessageCircle, Share, MoreHorizontal,
   Bookmark, UserPlus, UserMinus
@@ -15,23 +15,20 @@ interface SocialPostProps {
 }
 
 export const SocialPost = ({ post }: SocialPostProps) => {
-  const [likesCount, setLikesCount] = useState(post.likesCount || 0);
-
   const {
     followUser, unfollowUser, savePost, unsavePost,
     isFollowing, isSaved,
-    likePost, unlikePost, isLiked
+    likePost, unlikePost,
   } = useSocialActions();
 
+  const [likesCount, setLikesCount] = useState(post.likesCount || 0);
+  const [isPostLiked, setIsPostLiked] = useState(post.likedByMe || false);
   const [isPostSaved, setIsPostSaved] = useState(isSaved(post.id));
-  const [userFollowing, setUserFollowing] = useState(isFollowing(post.author.id));
+  const [userFollowing, setUserFollowing] = useState(isFollowing(post.author.handle));
   
-  const [isPostLiked, setIsPostLiked] = useState(isLiked(post.id));
-
   useEffect(() => {
-    setIsPostLiked(isLiked(post.id));
-  }, [isLiked, post.id]);
-
+    setIsPostSaved(isSaved(post.id));
+  }, [isSaved, post.id]);
 
   const cleanHtml = DOMPurify.sanitize(post.content);
   const parsedContent = parse(cleanHtml);
@@ -40,21 +37,23 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
   const handleLike = async () => {
     if (isPostLiked) {
-      await unlikePost(post.id);
       setLikesCount(prev => prev - 1);
+      setIsPostLiked(false);
+      await unlikePost(post.id);
     } else {
-      await likePost(post.id);
       setLikesCount(prev => prev + 1);
+      setIsPostLiked(true);
+      await likePost(post.id);
     }
   };
 
   const handleSave = async () => {
     if (isPostSaved) {
-      await unsavePost(post.id);
       setIsPostSaved(false);
+      await unsavePost(post.id);
     } else {
-      await savePost(post.id);
       setIsPostSaved(true);
+      await savePost(post.id);
     }
   };
 
@@ -90,7 +89,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
     }
   };
 
-  // Simplified media rendering for single attachment
   const renderMedia = () => {
     if (!post.attachment) return null;
 
@@ -143,7 +141,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
           </div>
         </Link>
 
-
         <div className="social-post-header-actions">
           <button className="social-post-more-btn">
             <MoreHorizontal className="w-5 h-5" />
@@ -171,7 +168,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
       <div className="sp-actions">
         <div className="sp-left-actions">
           <button onClick={handleLike} className={`sp-icon-btn ${isPostLiked ? 'liked' : ''}`}>
-            <Heart className={isPostLiked ? 'filled' : ''} />
+            <Heart fill={isPostLiked ? '#ef4444' : 'none'} color={isPostLiked ? '#ef4444' : 'currentColor'} />
             <span>{likesCount}</span>
           </button>
           <Link to={`/post/${post.id}`} className="sp-icon-btn">
@@ -181,7 +178,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
         </div>
         <div className="sp-right-actions">
           <button onClick={handleSave} className={`sp-icon-btn ${isPostSaved ? 'saved' : ''}`}>
-            <Bookmark className={isPostSaved ? 'filled' : ''} />
+            <Bookmark fill={isPostSaved ? '#2563eb' : 'none'} color={isPostSaved ? '#2563eb' : 'currentColor'} />
           </button>
           <button onClick={handleShare} className="sp-icon-btn"><Share /></button>
         </div>
@@ -193,7 +190,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 export function extractHashtags(content: string): string[] {
   const htmlTags = Array.from(content.matchAll(/<a[^>]*class="mention hashtag"[^>]*>#<span>([^<]*)<\/span><\/a>/g))
     .map(match => match[1]);
-
 
   if (htmlTags.length > 0) {
     return htmlTags;
