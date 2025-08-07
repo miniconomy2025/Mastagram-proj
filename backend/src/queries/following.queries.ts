@@ -29,14 +29,14 @@ export async function findFollowingByUsername(username: string, limit: number, c
 }
 
 export async function checkIfFollowing(followerUsername: string, followingActorId: string): Promise<boolean> {
-    const following = collection();
-    const result = await following.findOne({
-      followerUsername,
-      following: followingActorId, 
+    const followers = collection();
+    const result = await followers.findOne({
+      followingUsername: followerUsername,
+      "actor.id": followingActorId, 
     });
   
     return !!result;
-  }
+}
 
 export async function createFollowing(following: Following) {
     const col = collection();
