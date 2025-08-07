@@ -99,8 +99,7 @@ const Search = () => {
       <SearchHeader
         query={query}
         onQueryChange={setQuery}
-        // onFilterChange={setSearchFilter}
-        // activeFilter={searchFilter}
+        isLoading={loading}
       />
 
       <main className="search-page-main">

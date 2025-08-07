@@ -53,7 +53,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
       await unsavePost(post.id);
     } else {
       setIsPostSaved(true);
-      await savePost(post.id);
+      await savePost(post);
     }
   };
 
