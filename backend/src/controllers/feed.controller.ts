@@ -169,19 +169,18 @@ export class FeedController {
                 id: ctx.getObjectUri(Note, { identifier: feedData.feedId }),
                 attribution: ctx.getActorUri(feedData.author),
                 content: feedData.feedType === 'media' ? (feedData.caption ?? '') : (feedData.content ?? ''),
-                attachments: feedData.media?.length
-                    ? feedData.media.map(media =>
-                        media.mediaType === 'image'
-                            ? new Image({
-                                url: new URL(media.url),
-                                mediaType: 'image/jpeg',
-                            })
-                            : new Video({
-                                url: new URL(media.url),
-                                mediaType: 'video/mp4',
-                            })
-                    )
-                    : undefined
+                attachments: feedData.media?.map(media =>
+                    media.mediaType === 'image'
+                        ? new Image({
+                            url: new URL(media.url),
+                            mediaType: 'image/jpeg',
+                        })
+                        : new Video({
+                            url: new URL(media.url),
+                            mediaType: 'video/mp4',
+                        })
+                ),
+                to: new URL("https://www.w3.org/ns/activitystreams#Public"),
             });
 
 
@@ -191,6 +190,7 @@ export class FeedController {
                 new Create({
                     actor: ctx.getActorUri(feedData.author),
                     object: note,
+                    to: new URL("https://www.w3.org/ns/activitystreams#Public"),
                 })
             );
     
