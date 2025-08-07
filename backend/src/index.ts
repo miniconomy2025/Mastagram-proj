@@ -17,6 +17,7 @@ setupSwaggerDocs(app);
 const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:8081',
+  'https://d24gwdo6q6b8x9.cloudfront.net',
   process.env.FRONTEND_URL, 
 ].filter(Boolean); 
 
