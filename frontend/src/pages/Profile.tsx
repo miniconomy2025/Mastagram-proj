@@ -214,7 +214,7 @@ const Profile = () => {
     username: federatedProfileQuery.data?.handle || '',
     display_name: federatedProfileQuery.data?.name || '',
     bio: parse(DOMPurify.sanitize(federatedProfileQuery.data?.bio || '')) || '',
-    avatar_url: federatedProfileQuery.data?.avatarUrl,
+    avatar_url: isViewingOwnProfile ? apiUser?.avatarUrl : federatedProfileQuery.data?.avatarUrl,
     following: federatedProfileQuery.data?.following ?? 0,
     followers: federatedProfileQuery.data?.followers ?? 0,
     posts_count: userPostsQuery.data?.count ?? 0,
