@@ -52,28 +52,26 @@ async function readCollection(ctx: Context<unknown>, collection: Collection | Co
     if (first)
         return await readCollection(ctx, first);
 
-    const items = (
-        await Promise.all(collection.itemIds.map(id => cachedLookupObject(ctx, id.href)))
-    ).filter(item => !!item);
+    const items = [];
+    
+    try {
+        for await (const item of collection.getItems()) {
+            if (item instanceof Object) {
+                items.push(item);
+            } else if (item.href) {
+                try {
+                    const obj = await cachedLookupObject(ctx, item.href.href);
+                    if (obj)
+                        items.push(obj);
+                } catch {}
+            }
+        }
+    } catch {} // return what we have
 
     const next = collection instanceof CollectionPage ? collection.nextId : null;
 
     return {
         items,
-        next: next ?? undefined,
-    };
-}
-
-async function readCollectionIds(ctx: Context<unknown>, collection: Collection | CollectionPage): Promise<{ items: URL[], next?: URL }> {
-    const first = await collection.getFirst();
-
-    if (first)
-        return await readCollectionIds(ctx, first);
-
-    const next = collection instanceof CollectionPage ? collection.nextId : null;
-
-    return {
-        items: collection.itemIds,
         next: next ?? undefined,
     };
 }
