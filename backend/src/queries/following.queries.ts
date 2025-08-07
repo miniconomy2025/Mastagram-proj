@@ -8,6 +8,13 @@ function collection() {
     return db.collection<Following>('following');
 }
 
+export async function countFollowingByUsername(username: string) {
+    const followers = collection();
+    return await followers.countDocuments({
+        followerUsername: username
+    });
+}
+
 export async function findFollowingByUsername(username: string, limit: number, cursor: number = Number.MAX_SAFE_INTEGER): Promise<Following[] | null> {
     const following = collection();
     
