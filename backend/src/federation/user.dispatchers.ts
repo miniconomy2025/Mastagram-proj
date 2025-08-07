@@ -10,6 +10,7 @@ import { countPostsByAuthor, findPostsByAuthor } from "../queries/post.queries.t
 import type { Post } from "../models/post.models.ts";
 import type { WithId } from "mongodb";
 import { postToNote } from "./post.dispatchers.ts";
+import { convertActivityPubHandleToUrl } from "../utils/federation.util.ts";
 
 async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
     const url = ctx.getActorUri(user.username);
@@ -139,7 +140,7 @@ export function addUserDispatchers<T>(federation: Federation<T>) {
 
         if (followings === null) return null;
 
-        const recipients: URL[] = followings.map(follower => new URL(follower.actorId));
+        const recipients: URL[] = followings.map(follower => new URL(convertActivityPubHandleToUrl(follower.actorId)));
 
         return {
             items: recipients,

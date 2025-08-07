@@ -58,3 +58,35 @@ export function normaliseLink(link: URL | Link | null | undefined): URL | undefi
         return link ?? undefined;
     }
 }
+
+/**
+ * Converts ActivityPub handles to proper URLs
+ * @param actorId - Either an ActivityPub handle (@username@domain) or a URL string
+ * @returns A proper URL string that can be used with the URL constructor
+ */
+export function convertActivityPubHandleToUrl(actorId: string): string {
+  try {
+    new URL(actorId);
+    return actorId;
+  } catch {
+  }
+
+  if (actorId.startsWith('@')) {
+    try {
+      const withoutLeadingAt = actorId.substring(1);
+      const parts = withoutLeadingAt.split('@');
+      
+      if (parts.length === 2) {
+        const [username, domain] = parts;
+        
+        if (username.trim() && domain.trim()) {
+          return `https://${domain}/users/${username}`;
+        }
+      }
+    } catch (error) {
+      logger.warn(`Failed to parse ActivityPub handle: ${actorId}`, { error });
+    }
+  }
+
+  return actorId;
+}
