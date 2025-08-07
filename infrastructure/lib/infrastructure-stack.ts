@@ -6,6 +6,7 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 interface ExtendedStackProps extends cdk.StackProps {
   deployRegion: string;
@@ -105,9 +106,31 @@ export class InfrastructureStack extends cdk.Stack {
       'Allow API Requests.'
     );
 
-    const keyPair = new ec2.KeyPair(this, 'MastergramKeyPair', {
-      keyPairName: 'mastergram-key-pair',
+    // const keyPair = new ec2.KeyPair(this, 'MastergramKeyPair', {
+    //   keyPairName: 'mastergram-key-pair',
+    // });
+
+    // Create an IAM role for the EC2 instance with S3 access
+    const ec2S3AccessRole = new iam.Role(this, 'MastergramEc2S3AccessRole', {
+      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
+      description: 'Allows EC2 instance to access S3 buckets for Mastergram',
     });
+
+    // Add policy for S3 access
+    ec2S3AccessRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket"
+      ],
+      resources: [
+        contentStorageBucket.bucketArn,
+        `${contentStorageBucket.bucketArn}/*`,
+      ]
+    }));
+
+
 
     const userData = ec2.UserData.forLinux();
     userData.addCommands(
@@ -127,10 +150,10 @@ export class InfrastructureStack extends cdk.Stack {
       'sudo yum install -y docker',
       'sudo systemctl start docker',
       'sudo systemctl enable docker',
-      
+
       // Add ec2-user to docker group for permission to run Docker commands
       'sudo usermod -a -G docker ec2-user',
-      
+
       // Install Docker Compose v2 (recommended approach)
       'sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose',
       'sudo chmod +x /usr/local/bin/docker-compose',
@@ -139,14 +162,14 @@ export class InfrastructureStack extends cdk.Stack {
       // Verify Docker installation and permissions
       'sudo docker --version',
       'sudo docker-compose --version',
-      
+
       // Create application directory with proper ownership
       'sudo mkdir -p /home/ec2-user/mastagram',
       'sudo chown ec2-user:ec2-user /home/ec2-user/mastagram',
-      
+
       // Ensure Docker service is properly configured to start on boot
       'sudo systemctl is-enabled docker || sudo systemctl enable docker',
-      
+
       // Create a simple test to verify Docker works for ec2-user (will run on next login)
       'echo "#!/bin/bash" | sudo tee /home/ec2-user/test-docker.sh',
       'echo "docker --version && docker-compose --version && echo \\"Docker setup complete\\"" | sudo tee -a /home/ec2-user/test-docker.sh',
@@ -157,14 +180,25 @@ export class InfrastructureStack extends cdk.Stack {
     // Create the EC2 instance
     const ec2Instance = new ec2.Instance(this, 'MastergramEc2Instance', {
       vpc,
-      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MEDIUM),
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       securityGroup: ec2SecurityGroup,
-      keyPair: keyPair,
+      keyName: 'mastergram-ssh-key-pair',
       vpcSubnets: {
         subnetType: ec2.SubnetType.PUBLIC,
       },
       userData: userData,
+      role: ec2S3AccessRole,
+      blockDevices: [
+        {
+          deviceName: '/dev/xvda',
+          volume: ec2.BlockDeviceVolume.ebs(30, {
+            volumeType: ec2.EbsDeviceVolumeType.GP3,
+            encrypted: true,
+            deleteOnTermination: true,
+          }),
+        },
+      ],
     });
 
     // -=== API Gateway ===-
