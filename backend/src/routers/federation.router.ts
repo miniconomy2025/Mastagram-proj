@@ -6,8 +6,12 @@ import { Collection, CollectionPage, Create, Document, Image, isActor, Link, typ
 import base64url from "base64url";
 import { getFollowersAndFollowingCount, getRepliesCount } from "../utils/federation.util.ts";
 import { getFollowers, getFollowing } from "../controllers/federation.controller.ts";
-import { getCollectionItems } from "../services/federation.service.ts";
 import { esClient } from "../configs/elasticsearch.ts";
+import { ensureAuthenticated } from "../configs/passport.config.ts";
+import { Temporal } from "@js-temporal/polyfill";
+import { checkIfFollowing } from "../queries/following.queries.ts";
+import { doesUserLikePost } from "../queries/feed.queries.ts";
+import config from "../config.ts";
 
 const UNEXPECTED_ERROR = 'An unexpected error has occurred.';
 
@@ -25,27 +29,32 @@ type PaginatedList<T> = {
     count?: number,
 };
 
+async function readEntireCollection(ctx: Context<unknown>, collection: Collection | CollectionPage): Promise<Object[]> {
+    let page = await readCollection(ctx, collection);
+    const returnItems = page.items;
+
+    while (page.next) {
+        const nextPage = await cachedLookupObject(ctx, page.next.href);
+        if (!nextPage || !(nextPage instanceof Collection)) break;
+
+        page = await readCollection(ctx, nextPage);
+        for (const item of page.items) {
+            returnItems.push(item);
+        }
+    }
+
+    return returnItems;
+}
+
 async function readCollection(ctx: Context<unknown>, collection: Collection | CollectionPage): Promise<{ items: Object[], next?: URL }> {
     const first = await collection.getFirst();
 
     if (first)
         return await readCollection(ctx, first);
 
-    const itemsPromise = await collection.getItems();
-
-    const items: Object[] = [];
-
-    for await (const item of itemsPromise) {
-        if (item instanceof Link) {
-            if (item.href) {
-                const object = await cachedLookupObject(ctx, item.href.href);
-                if (object)
-                    items.push(object);
-            }
-        } else {
-            items.push(item);
-        }
-    }
+    const items = (
+        await Promise.all(collection.itemIds.map(id => cachedLookupObject(ctx, id.href)))
+    ).filter(item => !!item);
 
     const next = collection instanceof CollectionPage ? collection.nextId : null;
 
@@ -69,7 +78,7 @@ async function readCollectionIds(ctx: Context<unknown>, collection: Collection |
     };
 }
 
-async function objectToUser(object: unknown): Promise<FederatedUser | null> {
+async function objectToUser(object: unknown, myUsername?: string): Promise<FederatedUser | null> {
     if (!isActor(object) || !object.id || !object.preferredUsername) {
         return null;
     }
@@ -98,22 +107,23 @@ async function objectToUser(object: unknown): Promise<FederatedUser | null> {
         followers: followersCount ?? 0,
         following: followingCount ?? 0,
         createdAt: object.published?.toString(),
+        followedByMe: !!myUsername && await checkIfFollowing(myUsername, object.id.href),
     };
 
     return user;
 }
 
 
-async function objectToPost(object: unknown): Promise<FederatedPost | null> {
+async function objectToPost(object: unknown, myUsername?: string): Promise<FederatedPost | null> {
     if (!(object instanceof Note) || !object.id || !object.content) {
-        logger.warn`malformed post, ${object}`;
+        logger.warn`malformed post, ${object && typeof object === 'object' && 'id' in object ? object.id : 'no object id'}`;
         return null;
     }
 
     const attribution = await object?.getAttribution();
 
     if (!attribution?.id || !attribution.preferredUsername) {
-        logger.warn`malformed post attribution, ${attribution}`;
+        logger.warn`malformed post attribution, ${attribution?.id}`;
         return null;
     }
 
@@ -208,6 +218,7 @@ async function objectToPost(object: unknown): Promise<FederatedPost | null> {
         repliesCount,
         isReplyTo: isReplyTo?.href,
         createdAt: object.published?.toString(),
+        likedByMe: !!myUsername && await doesUserLikePost(myUsername, object.id.href),
     };
 
     return post;
@@ -226,6 +237,7 @@ type FederatedUser = {
     following: number;
     // iso 8601 date time
     createdAt?: string,
+    followedByMe: boolean,
 };
 
 federationRouter.get('/users/:userId', async (req, res) => {
@@ -234,7 +246,7 @@ federationRouter.get('/users/:userId', async (req, res) => {
     const ctx = createContext(federation, req);
     const object = await cachedLookupObject(ctx, req.params.userId);
 
-    const user = await objectToUser(object);
+    const user = await objectToUser(object, req.user?.username);
 
     if (!user) {
         res.status(404);
@@ -244,7 +256,14 @@ federationRouter.get('/users/:userId', async (req, res) => {
         return;
     }
 
-    res.json(user);
+    let followedByMe = !!req.user?.username && await checkIfFollowing(req.user.username, user.id);
+
+    const response = {
+        ...user,
+        followedByMe,
+    };
+
+    res.json(response);
 });
 
 federationRouter.get('/users/:userId/posts', async (req, res) => {
@@ -294,7 +313,7 @@ federationRouter.get('/users/:userId/posts', async (req, res) => {
         if (item instanceof Create && item.objectId) {
             const object = await cachedLookupObject(ctx, item.objectId.href);
             if (object)
-                return await objectToPost(object);
+                return await objectToPost(object, req.user?.username);
         }
         return null;
     }))).filter(item => !!item);
@@ -342,6 +361,7 @@ type FederatedPost = {
     isReplyTo?: string,
     // iso 8601 datetime
     createdAt?: string,
+    likedByMe: boolean,
 };
 
 federationRouter.get('/posts/:postId', async (req, res) => {
@@ -353,7 +373,7 @@ federationRouter.get('/posts/:postId', async (req, res) => {
 
     logger.debug`fetched object: ${!!object}`;
 
-    const post = await objectToPost(object);
+    const post = await objectToPost(object, req.user?.username);
 
     if (!post) {
         res.status(404);
@@ -422,7 +442,7 @@ federationRouter.get('/posts/:postId/replies', async (req, res) => {
         return;
     }
 
-    const items = (await Promise.all(replyItems.items.map(item => objectToPost(item))))
+    const items = (await Promise.all(replyItems.items.map(item => objectToPost(item, req.user?.username))))
         .filter(item => !!item);
 
     const nextCursor = replyItems.next
@@ -438,104 +458,154 @@ federationRouter.get('/posts/:postId/replies', async (req, res) => {
     res.json(replyPosts);
 });
 
-// Add this to your federationRouter.ts
-federationRouter.get('/me/following/posts', async (req, res) => {
+type FeedReader = {
+    items: {
+        post: FederatedPost,
+        published: Temporal.Instant
+    }[],
+    next?: string,
+    current?: string,
+};
+
+async function expandFeed(ctx: Context<unknown>, feed: FeedReader, username: string, cursor: Temporal.Instant) {
     try {
-        const ctx = createContext(federation, req);
-        const cursor = req.query.cursor?.toString();
-        const limit = parseInt(req.query.limit?.toString() || PAGINATION_LIMIT.toString());
+        if (!feed.next)
+            return;
 
-        // 1. Get the authenticated user's actor
-        const actorUri = await cachedLookupObject(ctx, '@Third3King@mastodon.social');
-        if (!actorUri) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
+        const outbox = await cachedLookupObject(ctx, feed.next);
+        if (!outbox || !(outbox instanceof Collection))
+            return;
+        
+        const nextPage = await readCollection(ctx, outbox);
+        
+        const posts = (await Promise.all(nextPage.items.map(async item => {
+            if (!(item instanceof Create) || !item.objectId)
+                return null;
 
-        // const currentUser = await cachedLookupObject(ctx, actorUri);
-        if (!actorUri || !isActor(actorUri)) {
-            return res.status(404).json({ error: "User not found" });
-        }
+            const object = await cachedLookupObject(ctx, item.objectId.href);
+            if (!object)
+                return null;
 
-        // 2. Get the user's following collection
-        const followingCollection = await cachedLookupObject(ctx, actorUri.followingId?.href ?? "") as Collection;
-        if (!followingCollection) {
-            return res.status(404).json({ error: "Following collection not found" });
-        }
+            const post = await objectToPost(object, username);
+            if (!post || !item.published)
+                return null;
+            return {
+                post,
+                published: item.published,
+            };
+        })))
+            .filter(post => !!post)
+            .filter(post => {
+                const keep = Temporal.Instant.compare(post.published, cursor) < 0;
+                if (!keep)
+                    logger.error`removing too recent post, created ${post.published} (${post.post.id})`;
+                return keep;
+            });
 
-        // 3. Fetch all followed users
-        const { items: following } = await getCollectionItems(
-            ctx,
-            followingCollection,
-            cursor,
-            async (item) => {
-                if (!isActor(item)) return null;
-                return item;
-            }
-        );
+        logger.info`read ${posts.length} posts`;
 
-        // 4. Fetch posts from each followed user's outbox
-        const allPosts: FederatedPost[] = [];
-        const postPromises = following.map(async (followedUser) => {
-            if (!followedUser) return;
-
-            if (!isActor(followedUser) || !followedUser.id) {
-                logger.warn(`Invalid followed user: ${followedUser}`);
-                return;
-            }
-            try {
-                const outbox = await followedUser.getOutbox();
-                if (!outbox) return;
-
-                const { items: outboxItems } = await readCollection(ctx, outbox);
-                const createActivities = outboxItems.filter(item => item instanceof Create);
-
-                for (const activity of createActivities) {
-                    try {
-                        const object = await activity.getObject();
-                        if (!object || !(object instanceof Note)) continue;
-
-                        const post = await objectToPost(object);
-                        if (post) allPosts.push(post);
-                    } catch (error) {
-                        logger.warn(`Failed to process post: ${error}`);
-                    }
-                }
-            } catch (error) {
-                logger.warn(`Failed to fetch outbox for ${followedUser.id}: ${error}`);
-            }
-        });
-
-        await Promise.all(postPromises);
-
-        // 5. Sort posts by date (newest first)
-        allPosts.sort((a, b) => {
-            const dateA = new Date(a.createdAt || 0).getTime();
-            const dateB = new Date(b.createdAt || 0).getTime();
-            return dateB - dateA;
-        });
-
-        // 6. Apply pagination
-        const paginatedPosts = cursor
-            ? allPosts.slice(parseInt(cursor), parseInt(cursor) + limit)
-            : allPosts.slice(0, limit);
-
-        // 7. Prepare response
-        const nextCursor = allPosts.length > parseInt(cursor || '0') + limit
-            ? (parseInt(cursor || '0') + limit).toString()
-            : undefined;
-
-        const response: PaginatedList<FederatedPost> = {
-            items: paginatedPosts,
-            next: nextCursor ? `/api/federation/me/following/posts?cursor=${nextCursor}&limit=${limit}` : undefined,
-            count: allPosts.length,
-        };
-
-        return res.json(response);
-
-    } catch (error) {
-        logger.error(`Error fetching following posts: ${error}`);
-        return res.status(500).json({ error: "Failed to fetch following posts" });
+        feed.current = feed.next;
+        feed.items = posts;
+        feed.next = nextPage.next?.href;
+        return;
+    } catch {
+        feed.next = undefined;
+        feed.items = [];
+        return;
     }
+}
+
+federationRouter.get('/me/following/posts', ensureAuthenticated, async (req, res) => {
+    const username = req.user?.username;
+    
+    if (!username) {
+        return res.status(401).json({error: 'Not logged in!'});
+    }
+
+    const userHandle = `@${username}@${config.federation.origin}`;
+
+    let cursor = Temporal.Now.instant();
+    try {
+        let cursorEpoch = parseInt(req.query.cursor as string | undefined ?? '');
+        if (isFinite(cursorEpoch)) {
+            cursor = Temporal.Instant.fromEpochMilliseconds(cursorEpoch);
+        }
+    } catch {}
+    
+    const ctx = createContext(federation, req);
+
+    const limit = parseInt(req.query.limit?.toString() || PAGINATION_LIMIT.toString());
+
+    const actor = await cachedLookupObject(ctx, userHandle);
+    if (!actor || !isActor(actor)) {
+        throw new Error('Logged in user does not exist');
+    }
+
+    const followingCollection = await actor.getFollowing();
+    if (!followingCollection) {
+        throw new Error('Malformed user.');
+    }
+
+    const followingActors = (await readEntireCollection(
+        ctx,
+        followingCollection,
+    )).filter(object => isActor(object));
+
+    const followingFeedReaders: FeedReader[] = (await Promise.all(
+        followingActors.map(async actor => {
+            if (!actor.outboxId) return null;
+
+            return {
+                items: [] as { post: FederatedPost, published: Temporal.Instant }[],
+                next: actor.outboxId.href,
+                current: '',
+            };
+        }
+    ))).filter(feed => feed != null);
+
+    const followingFeeds = await Promise.all(followingFeedReaders.map(feed => {
+        expandFeed(ctx, feed, username, cursor);
+        return feed;
+    }));
+
+    logger.info`user is following ${followingFeeds.length} users`;
+
+    const feed = [];
+
+    // continue while we haven't filled up the feed and all feeds are not exhausted
+    while (feed.length < limit && !followingFeeds.every(f => !f.next)) {
+        // find newest post
+        let newest = undefined;
+        let newestFeed = undefined;
+
+        for (const followingFeed of followingFeeds) {
+            // extend feed if empty
+            while (followingFeed.items.length === 0 && followingFeed.next) {
+                await expandFeed(ctx, followingFeed, username, cursor);
+            }
+
+            for (const post of followingFeed.items) {
+                if (!newest || Temporal.Instant.compare(newest.published, post.published) < 0) {
+                    newest = post;
+                    newestFeed = followingFeed;
+                }
+            }
+        }
+
+        if (!newest || !newestFeed) break;
+
+        feed.push(newest);
+        newestFeed.items = newestFeed.items.filter(item => item != newest);
+    }
+
+    const nextCursor = feed.at(-1)?.published?.epochMilliseconds;
+
+    const response: PaginatedList<FederatedPost> = {
+        items: feed.map(item => item.post),
+        next: nextCursor ? `/api/federation/me/following/posts?cursor=${nextCursor}&limit=${limit}` : undefined,
+    };
+
+    return res.json(response);
 });
 
 
@@ -564,7 +634,7 @@ federationRouter.get('/search', async (req, res) => {
                 const actorUrl = `https://${domain}/users/${username}`;
 
                 const actor = await cachedLookupObject(ctx, actorUrl);
-                const user = await objectToUser(actor);
+                const user = await objectToUser(actor, req.user?.username);
                 if (user) {
                     results.push(user);
                 }
