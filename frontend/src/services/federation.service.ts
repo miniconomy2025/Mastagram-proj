@@ -1,14 +1,14 @@
 import { api } from "@/lib/api";
 import { FederatedPost, FederatedUser, PaginatedResponse } from "@/types/federation";
 
-const API_BASE_URL = '/federation'; // Using relative path since base URL is already in your api config
+const API_BASE_URL = '/federation'; 
 
 export const getFollowing = async (
   userId: string,
   page?: string
 ): Promise<PaginatedResponse<FederatedUser>> => {
   try {
-    const url = `/users/${encodeURIComponent(userId)}/following`;
+    const url = `/${API_BASE_URL}/users/${encodeURIComponent(userId)}/following`;
     const params = page ? { page } : undefined;
     
     const data = await api.get<PaginatedResponse<FederatedUser>>(url, { params });
@@ -29,7 +29,7 @@ export const getFollowers = async (
   page?: string
 ): Promise<PaginatedResponse<FederatedUser>> => {
   try {
-    const url = `/users/${encodeURIComponent(userId)}/followers`;
+    const url = `/${API_BASE_URL}/users/${encodeURIComponent(userId)}/followers`;
     const params = page ? { page } : undefined;
     
     const data = await api.get<PaginatedResponse<FederatedUser>>(url, { params });
@@ -50,7 +50,7 @@ export const getPosts = async (
   cursor?: string
 ): Promise<PaginatedResponse<FederatedPost>> => {
   try {
-    const url = `/users/${encodeURIComponent(userId)}/posts`;
+    const url = `/${API_BASE_URL}/users/${encodeURIComponent(userId)}/posts`;
     const params = cursor ? { cursor } : undefined;
     
     const data = await api.get<PaginatedResponse<FederatedPost>>(url, { params });
@@ -70,7 +70,8 @@ export const getFeeds = async (
   cursor?: string
 ): Promise<PaginatedResponse<FederatedPost>> => {
   try {
-    const url = '/federation/me/following/posts';
+    const url = '/${API_BASE_URL}/me/following/posts';
+  
     const params = cursor ? { cursor } : undefined;
     
     const data = await api.get<PaginatedResponse<FederatedPost>>(url, { params });
