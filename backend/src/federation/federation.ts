@@ -7,10 +7,13 @@ import type { Request } from "express";
 import redisClient from "../redis.ts";
 import { Redis } from "ioredis";
 import config from "../config.ts";
+import logger from "../logger.ts";
 
 export function createContext(federation: Federation<unknown>, request: Request) {
     return federation.createContext(new URL(config.federation.origin!), undefined);
 }
+
+logger.info`creating federation at origin: ${config.federation.origin}`;
 
 const federation = createFederation({
   kv: new RedisKvStore(redisClient),

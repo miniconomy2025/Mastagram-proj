@@ -71,6 +71,7 @@ export const getFeeds = async (
 ): Promise<PaginatedResponse<FederatedPost>> => {
   try {
     const url = '/${API_BASE_URL}/me/following/posts';
+  
     const params = cursor ? { cursor } : undefined;
     
     const data = await api.get<PaginatedResponse<FederatedPost>>(url, { params });

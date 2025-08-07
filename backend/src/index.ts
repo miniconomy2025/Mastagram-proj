@@ -20,7 +20,9 @@ const allowedOrigins = [
   'http://localhost:8081',
   'https://d24gwdo6q6b8x9.cloudfront.net',
   process.env.FRONTEND_URL, 
-].filter(Boolean); 
+].filter(Boolean);
+
+app.enable('trust proxy');
 
 app.use(cors({
   origin: (origin, callback) => {
