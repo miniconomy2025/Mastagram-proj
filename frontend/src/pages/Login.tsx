@@ -63,15 +63,6 @@ const Login = () => {
               </svg>
               {loading ? "Signing in..." : "Continue with Google"}
             </Button>
-
-            <div className="signup-text-wrapper">
-              <p className="signup-text">
-                Don't have an account?{' '}
-                <Link to="/signup" className="signup-link">
-                  Sign up
-                </Link>
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
