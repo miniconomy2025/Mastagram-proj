@@ -179,7 +179,7 @@ const PostDetail = () => {
       <div className="post-detail-header">
         <div className="post-detail-header-content">
           <div className="post-detail-header-nav">
-            <Link to="/feed">
+            <Link to="/">
               <button className="post-detail-back-btn">
                 <ArrowLeft className="w-5 h-5" />
               </button>
