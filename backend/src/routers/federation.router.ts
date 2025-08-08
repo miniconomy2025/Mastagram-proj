@@ -7,7 +7,7 @@ import base64url from "base64url";
 import { getFollowersAndFollowingCount, getRepliesCount } from "../utils/federation.util.ts";
 import { getFollowers, getFollowing } from "../controllers/federation.controller.ts";
 import { esClient } from "../configs/elasticsearch.ts";
-import { ensureAuthenticated } from "../configs/passport.config.ts";
+import { ensureAuthenticated, maybeAuthenticated } from "../configs/passport.config.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import { checkIfFollowing } from "../queries/following.queries.ts";
 import { doesUserLikePost } from "../queries/feed.queries.ts";
@@ -237,7 +237,7 @@ type FederatedUser = {
     followedByMe: boolean,
 };
 
-federationRouter.get('/users/:userId', async (req, res) => {
+federationRouter.get('/users/:userId', maybeAuthenticated, async (req, res) => {
     logger.info`fetching user ${req.params.userId}`;
 
     const ctx = createContext(federation, req);
@@ -263,7 +263,7 @@ federationRouter.get('/users/:userId', async (req, res) => {
     res.json(response);
 });
 
-federationRouter.get('/users/:userId/posts', ensureAuthenticated, async (req, res) => {
+federationRouter.get('/users/:userId/posts', maybeAuthenticated, async (req, res) => {
     logger.info`fetching user ${req.params.userId} posts`;
 
     const ctx = createContext(federation, req);
@@ -361,7 +361,7 @@ type FederatedPost = {
     likedByMe: boolean,
 };
 
-federationRouter.get('/posts/:postId', async (req, res) => {
+federationRouter.get('/posts/:postId', maybeAuthenticated, async (req, res) => {
     const postId = req.params.postId;
     logger.info`fetching post ${postId}`;
 
@@ -383,7 +383,7 @@ federationRouter.get('/posts/:postId', async (req, res) => {
     res.json(post);
 });
 
-federationRouter.get('/posts/:postId/replies', async (req, res) => {
+federationRouter.get('/posts/:postId/replies', maybeAuthenticated, async (req, res) => {
     const postId = req.params.postId;
     logger.info`fetching post ${postId}`;
 
@@ -606,7 +606,7 @@ federationRouter.get('/me/following/posts', ensureAuthenticated, async (req, res
 });
 
 
-federationRouter.get('/search', async (req, res) => {
+federationRouter.get('/search', maybeAuthenticated, async (req, res) => {
     try {
         const { q, type, cursor, limit = 20 } = req.query;
         const ctx = createContext(federation, req);
@@ -707,7 +707,7 @@ federationRouter.get('/search', async (req, res) => {
     }
 });
 
-federationRouter.get('/posts/:postId/with-replies', async (req, res) => {
+federationRouter.get('/posts/:postId/with-replies', maybeAuthenticated, async (req, res) => {
     const postId = req.params.postId;
     logger.info`fetching post with replies ${postId}`;
 
@@ -777,8 +777,8 @@ federationRouter.get('/posts/:postId/with-replies', async (req, res) => {
 });
 
 
-federationRouter.get('/users/:userId/followers', getFollowers);
+federationRouter.get('/users/:userId/followers', maybeAuthenticated, getFollowers);
 
-federationRouter.get('/users/:userId/following', getFollowing);
+federationRouter.get('/users/:userId/following', maybeAuthenticated, getFollowing);
 
 export default federationRouter;
