@@ -11,7 +11,6 @@ import { ensureAuthenticated } from "../configs/passport.config.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import { checkIfFollowing } from "../queries/following.queries.ts";
 import { doesUserLikePost } from "../queries/feed.queries.ts";
-import config from "../config.ts";
 
 const UNEXPECTED_ERROR = 'An unexpected error has occurred.';
 
@@ -112,7 +111,7 @@ async function objectToUser(object: unknown, myUsername?: string): Promise<Feder
 }
 
 
-async function objectToPost(object: unknown, myUsername?: string): Promise<FederatedPost | null> {
+async function objectToPost(ctx: Context<unknown>, object: unknown, myUsername?: string): Promise<FederatedPost | null> {
     if (!(object instanceof Note) || !object.id || !object.content) {
         logger.warn`malformed post, ${object && typeof object === 'object' && 'id' in object ? object.id : 'no object id'}`;
         return null;
@@ -216,7 +215,7 @@ async function objectToPost(object: unknown, myUsername?: string): Promise<Feder
         repliesCount,
         isReplyTo: isReplyTo?.href,
         createdAt: object.published?.toString(),
-        likedByMe: !!myUsername && await doesUserLikePost(myUsername, object.id.href),
+        likedByMe: !!myUsername && await doesUserLikePost(ctx.getActorUri(myUsername).href, object.id.href),
     };
 
     return post;
@@ -311,7 +310,7 @@ federationRouter.get('/users/:userId/posts', ensureAuthenticated, async (req, re
         if (item instanceof Create && item.objectId) {
             const object = await cachedLookupObject(ctx, item.objectId.href);
             if (object)
-                return await objectToPost(object, req.user?.username);
+                return await objectToPost(ctx, object, req.user?.username);
         }
         return null;
     }))).filter(item => !!item);
@@ -371,7 +370,7 @@ federationRouter.get('/posts/:postId', async (req, res) => {
 
     logger.debug`fetched object: ${!!object}`;
 
-    const post = await objectToPost(object, req.user?.username);
+    const post = await objectToPost(ctx, object, req.user?.username);
 
     if (!post) {
         res.status(404);
@@ -440,7 +439,7 @@ federationRouter.get('/posts/:postId/replies', async (req, res) => {
         return;
     }
 
-    const items = (await Promise.all(replyItems.items.map(item => objectToPost(item, req.user?.username))))
+    const items = (await Promise.all(replyItems.items.map(item => objectToPost(ctx, item, req.user?.username))))
         .filter(item => !!item);
 
     const nextCursor = replyItems.next
@@ -484,7 +483,7 @@ async function expandFeed(ctx: Context<unknown>, feed: FeedReader, username: str
             if (!object)
                 return null;
 
-            const post = await objectToPost(object, username);
+            const post = await objectToPost(ctx, object, username);
             if (!post || !item.published)
                 return null;
             return {
@@ -723,7 +722,7 @@ federationRouter.get('/posts/:postId/with-replies', async (req, res) => {
         }
 
 
-        const post = await objectToPost(postObject, req.user?.username);
+        const post = await objectToPost(ctx, postObject, req.user?.username);
         if (!post) {
             res.status(404).json({ message: 'Post not found.' });
             return;
@@ -751,7 +750,7 @@ federationRouter.get('/posts/:postId/with-replies', async (req, res) => {
             try {
                 const replyCollection = await readCollection(ctx, replies);
                 replyItems = (await Promise.all(
-                    replyCollection.items.map(item => objectToPost(item, req.user?.username))
+                    replyCollection.items.map(item => objectToPost(ctx, item, req.user?.username))
                 )).filter((item): item is FederatedPost => item !== null);
                 
                 nextCursor = replyCollection.next 
