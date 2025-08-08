@@ -58,7 +58,7 @@ type ListTab = 'followers' | 'following';
 const useUserProfile = (handle: string | undefined) => {
   return useApiQuery<UserProfileResponse>(
     ['userProfile', handle],
-    handle ? `/federation/users/@PeoVukea5019@todo-secure-list.xyz` : '',
+    handle ? `/federation/users/${handle}` : '',
     { enabled: !!handle }
   );
 };
