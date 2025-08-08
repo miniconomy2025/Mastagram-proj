@@ -264,7 +264,7 @@ federationRouter.get('/users/:userId', async (req, res) => {
     res.json(response);
 });
 
-federationRouter.get('/users/:userId/posts', async (req, res) => {
+federationRouter.get('/users/:userId/posts', ensureAuthenticated, async (req, res) => {
     logger.info`fetching user ${req.params.userId} posts`;
 
     const ctx = createContext(federation, req);
