@@ -31,14 +31,14 @@ export class FollowController {
         return res.status(404).json({ message: 'Follower user not found' });
       }
 
-      const alreadyFollowing = await checkIfFollowing(followerUsername, followingId);
-      if (alreadyFollowing) {
-        return res.status(409).json({ message: 'Already following this user' });
-      }
-
       const followingActor = await cachedLookupObject(ctx, followingId);
       if (!followingActor || !isActor(followingActor) || !followingActor.inboxId || !followingActor.id?.href) {
         return res.status(404).json({ message: 'User to follow not found or is invalid' });
+      }
+
+      const alreadyFollowing = await checkIfFollowing(followerUsername, followingActor.id.href);
+      if (alreadyFollowing) {
+        return res.status(409).json({ message: 'Already following this user' });
       }
 
       const followActivity = new Follow({
