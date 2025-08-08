@@ -103,7 +103,7 @@ export class FollowController {
       await ctx.sendActivity({ username: followerUsername }, followingActor as Recipient, undoFollowActivity);
       logger.info(`Undo Follow activity sent from ${followerUsername} to ${followingId}`);
 
-      await deleteFollowing(followingId, followingActor.id.href);
+      await deleteFollowing(followingActor.id.href, followerUsername);
 
       return res.status(200).json({ message: 'Unfollow request sent successfully' });
     } catch (error: any) {
