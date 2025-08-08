@@ -16,7 +16,6 @@ import './Sidebar.css';
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Search', href: '/search', icon: Search },
-  { name: 'Trending', href: '/trending', icon: TrendingUp },
   { name: 'Notifications', href: '/notifications', icon: Heart },
   { name: 'Saved', href: '/saved', icon: Bookmark },
   { name: 'Profile', href: '/profile', icon: User },
