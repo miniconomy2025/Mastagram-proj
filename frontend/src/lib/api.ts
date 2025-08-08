@@ -6,6 +6,8 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 interface RequestOptions extends RequestInit {
   skipAuth?: boolean;
+  params?: Record<string, string | number>;
+  data?: Record<string, unknown>;
 }
 
 const tokens = {

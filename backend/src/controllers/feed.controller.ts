@@ -8,6 +8,8 @@ import { commentOnPost, findFeedDataByPostIds, findFeedDataByUserId, getUploader
 import federation, { createContext } from "../federation/federation.ts";
 import { Create, Like, Link, Note, Undo, Video, Image, type Recipient } from "@fedify/fedify";
 import { ObjectId } from "mongodb";
+import { notificationManager, type Notification } from "./notifications.controller.ts";
+import type { LikeModel } from "../types/interactions.js";
 
 interface CreateFeedData {
     caption?: string;
@@ -299,36 +301,58 @@ export class FeedController {
             return res.status(401).json({ message: "User not authenticated" });
         }
 
-        const postId = req.query.postId;
-        if (!postId) {
+        const post = req.query.postId;
+        if (!post) {
             return res.status(400).json({ message: "Post ID is required" });
         }
 
         try {
+            const decodedUrl = decodeURIComponent(post as string);
+            const parts = decodedUrl.split('/');
+            const postId = parts[parts.length - 1];
+            const liker = await getUploaderId(postId);
             const ctx = createContext(federation, req);
-            const postObject = await ctx.lookupObject(String(postId));
-
-            if (!postObject || !postObject.attributionId) {
-                return res.status(404).json({ message: "Post or its attribution not found" });
-            }
-
             const senderActorId = ctx.getActorUri(username);
             if (!senderActorId) {
                 return res.status(400).json({ message: "Invalid sender actor URI" });
             }
 
-            const likeActivity = new Like({
-                actor: senderActorId,
-                object: postObject.id ?? postObject,
-                to: postObject.attributionId,
-            });
+            const like: LikeModel = {
+                postId: decodedUrl,
+                likedBy: senderActorId.href,
+                likedAt: new Date(),
+            };
 
-            const recipientActor = await ctx.lookupObject(postObject.attributionId);
-            if (!recipientActor) {
-                return res.status(400).json({ message: "Recipient actor is missing inbox information" });
+            await likePost(like);
+
+            if (liker){
+                const likeNotification: Notification = {
+                    type: 'like',
+                    targetId: decodedUrl,
+                    userId: senderActorId.href,
+                    createdAt: like.likedAt,
+                };
+                
+                notificationManager.sendToUser(username, likeNotification);
+            } else {
+                const postObject = await ctx.lookupObject(String(post));
+                if (!postObject || !postObject.attributionId) {
+                    return res.status(404).json({ message: "Post or its attribution not found" });
+                }
+
+                const likeActivity = new Like({
+                    actor: senderActorId,
+                    object: postObject.id ?? postObject,
+                    to: postObject.attributionId,
+                });
+
+                const recipientActor = await ctx.lookupObject(postObject.attributionId);
+                if (!recipientActor) {
+                    return res.status(400).json({ message: "Recipient actor is missing inbox information" });
+                }
+
+                await ctx.sendActivity({ username }, recipientActor as unknown as Recipient, likeActivity);
             }
-
-            await ctx.sendActivity({ username }, recipientActor as unknown as Recipient, likeActivity);
 
             return res.status(200).json({ message: "Post liked successfully" });
 

@@ -36,7 +36,7 @@ export async function checkIfFollowing(followerUsername: string, followingActorI
     });
   
     return !!result;
-  }
+}
 
 export async function createFollowing(following: Following) {
     const col = collection();

@@ -93,7 +93,7 @@ const Index = () => {
       <main className="main-content">
         {error && (
           <div className="error-message-container">
-            <p className="error-text">{error}</p>
+            {/* <p className="error-text">{error}</p> */}
             <Button 
               variant="outline" 
               size="sm" 

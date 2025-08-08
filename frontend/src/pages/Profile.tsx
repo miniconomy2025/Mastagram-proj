@@ -36,6 +36,7 @@ interface UserProfileResponse {
   followers: number;
   following: number;
   avatarUrl: string;
+  followedByMe: boolean; 
 }
 
 interface UserListItem {
@@ -124,8 +125,6 @@ const useProfileData = () => {
   const [isLoadingApiUser, setIsLoadingApiUser] = useState(true);
   const [errorApiUser, setErrorApiUser] = useState<Error | null>(null);
 
-  console.log()
-
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -144,8 +143,7 @@ const useProfileData = () => {
 
   const isViewingOwnProfile = !routeUsername;
   const federatedHandle = isViewingOwnProfile
-    ? apiUser?.username ? `@${apiUser.username}@todo-secure-list.xyz` : undefined
-    : `@${routeUsername}`;
+  ? apiUser?.username ? `@${apiUser.username}@todo-secure-list.xyz` : undefined    : `@${routeUsername}`;
 
   return {
     apiUser,
@@ -155,6 +153,7 @@ const useProfileData = () => {
     federatedHandle
   };
 };
+
 
 const Profile = () => {
   const {
@@ -170,12 +169,10 @@ const Profile = () => {
   const [showConnections, setShowConnections] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Use the social actions hook and a state for the follow button
-  const { followUser, unfollowUser, isFollowing } = useSocialActions();
+  const { followUser, unfollowUser } = useSocialActions();
   const [isCurrentlyFollowing, setIsCurrentlyFollowing] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver>();
 
   const federatedProfileQuery = useUserProfile(federatedHandle);
   const userPostsQuery = useUserPosts(federatedHandle);
@@ -192,37 +189,39 @@ const Profile = () => {
     loadMore: loadMoreFollowing
   } = usePaginatedConnections(federatedHandle, 'following');
 
-  // Set the initial follow state when the profile data loads
   useEffect(() => {
     if (federatedProfileQuery.data) {
-      setIsCurrentlyFollowing(isFollowing(federatedProfileQuery.data.id));
+      setIsCurrentlyFollowing(federatedProfileQuery.data.followedByMe);
     }
-  }, [federatedProfileQuery.data, isFollowing]);
+  }, [federatedProfileQuery.data]);
 
-  // Handler function for the follow button
   const handleFollow = useCallback(async () => {
     const profileData = federatedProfileQuery.data;
     if (!profileData) return;
 
     if (isCurrentlyFollowing) {
       await unfollowUser(profileData.id, profileData.handle);
+      setIsCurrentlyFollowing(false);
     } else {
       await followUser(profileData.id, profileData.handle);
+      setIsCurrentlyFollowing(true);
     }
   }, [isCurrentlyFollowing, federatedProfileQuery.data, followUser, unfollowUser]);
 
-  const userPosts = userPostsQuery.data?.items ?? [];
+
   const userData = {
     id: federatedProfileQuery.data?.id || '1',
     username: federatedProfileQuery.data?.handle || '',
     display_name: federatedProfileQuery.data?.name || '',
     bio: parse(DOMPurify.sanitize(federatedProfileQuery.data?.bio || '')) || '',
-    avatar_url: federatedProfileQuery.data?.avatarUrl,
+    avatar_url: isViewingOwnProfile ? apiUser?.avatarUrl : federatedProfileQuery.data?.avatarUrl,
     following: federatedProfileQuery.data?.following ?? 0,
     followers: federatedProfileQuery.data?.followers ?? 0,
     posts_count: userPostsQuery.data?.count ?? 0,
     verified: true
   };
+  
+  const userPosts = userPostsQuery.data?.items ?? [];
 
   const mappedList = (connectionsTab === 'followers' ? followers : following).filter(user => user !== null && user !== undefined)
   .map(user => ({
@@ -420,7 +419,6 @@ const Profile = () => {
                     {!isViewingOwnProfile && (
                       <div className="profile-header-actions">
                         <button
-                          // Use the new handleFollow function here
                           onClick={handleFollow}
                           className={`profile-follow-btn ${isCurrentlyFollowing ? 'following' : ''}`}
                         >
@@ -452,12 +450,13 @@ const Profile = () => {
                   >
                     <Heart size={16} /> Liked
                   </button>
+                  { isViewingOwnProfile && 
                   <button
                     className={`tab-trigger ${activeTab === 'saved' ? 'active' : ''}`}
                     onClick={() => setActiveTab('saved')}
                   >
                     <Bookmark size={16} /> Saved
-                  </button>
+                  </button>}
                 </div>
 
                 {activeTab === 'posts' && (
@@ -501,11 +500,11 @@ const Profile = () => {
                   <div className="empty-state">
                     <Heart className="empty-icon" />
                     <h3>No liked posts yet</h3>
-                    <p>Posts you like will appear here</p>
+                    <p>Posts liked by this user will appear here</p>
                   </div>
                 )}
 
-                {activeTab === 'saved' && (
+                {activeTab === 'saved' && isViewingOwnProfile && (
                   <div className="empty-state">
                     <Bookmark className="empty-icon" />
                     <h3>No saved posts yet</h3>

@@ -1,19 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Heart, MessageCircle, Share, MoreHorizontal } from 'lucide-react';
 import { CommentSection } from '@/components/CommentSection';
 import './PostDetail.css';
+import { api } from '@/lib/api';
+
+interface Author {
+  id: string;
+  handle: string;
+  name: string;
+  avatar?: string;
+}
+
+interface ApiPost {
+  id: string;
+  author: Author;
+  content: string;
+  contentMediaType?: string;
+  attachment?: {
+    type: 'image' | 'video';
+    url: string;
+    name?: string;
+  };
+  likesCount?: number;
+  repliesCount?: number;
+  isReplyTo?: string;
+  createdAt: string;
+  likedByMe?: boolean;
+}
+
+interface ApiResponse {
+  post: ApiPost;
+  replies: {
+    items: ApiPost[];
+    next?: string;
+    count: number;
+  };
+}
 
 interface Post {
   id: string;
   user_id: string;
   username: string;
-  display_name?: string;
+  display_name: string;
   avatar?: string;
   caption: string;
   hashtags: string[];
-  media_url: string;
-  media_type: string;
+  media_url?: string;
+  media_type?: string;
   likes_count: number;
   comments_count: number;
   created_at: string;
@@ -23,102 +57,121 @@ interface Comment {
   id: string;
   user_id: string;
   username: string;
+  display_name: string;
+  avatar?: string;
   content: string;
   likes_count: number;
   created_at: string;
   replies?: Comment[];
 }
 
-// Mock data
-const mockPost: Post = {
-  id: 'post1',
-  user_id: 'user1',
-  username: 'travel_enthusiast',
-  display_name: 'Alex Johnson',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=travel',
-  caption: 'Amazing sunset at the beach! 🌅 Perfect end to a beautiful day. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-  hashtags: ['sunset', 'beach', 'paradise', 'vacation'],
-  media_url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=600&fit=crop',
-  media_type: 'image',
-  likes_count: 1247,
-  comments_count: 89,
-  created_at: '2024-01-15T18:30:00Z'
+const extractUsernameFromHandle = (handle: string) => {
+  return handle.split('@')[1] || 'user';
 };
 
-const mockComments: Comment[] = [
-  {
-    id: 'comment1',
-    user_id: 'user2',
-    username: 'beach_lover',
-    content: 'Absolutely stunning! Where is this beautiful place?',
-    likes_count: 15,
-    created_at: '2024-01-15T19:00:00Z',
-    replies: [
-      {
-        id: 'reply1',
-        user_id: 'user1',
-        username: 'travel_enthusiast',
-        content: 'Thanks! This is Maldives, absolutely magical place 🏝️',
-        likes_count: 8,
-        created_at: '2024-01-15T19:15:00Z'
-      }
-    ]
-  },
-  {
-    id: 'comment2',
-    user_id: 'user3',
-    username: 'photographer_pro',
-    content: 'The lighting in this shot is incredible! What camera did you use?',
-    likes_count: 23,
-    created_at: '2024-01-15T20:30:00Z'
-  }
-];
+const extractHashtags = (content: string) => {
+  const hashtagRegex = /#(\w+)/g;
+  const matches = content.match(hashtagRegex);
+  return matches ? matches.map(tag => tag.replace('#', '')) : [];
+};
+
+const cleanHtmlContent = (html: string) => {
+  // Simple HTML to plain text conversion
+  return html.replace(/<[^>]*>/g, ' ');
+};
+
+const mapApiPostToPost = (apiPost: ApiPost): Post => ({
+  id: apiPost.id,
+  user_id: apiPost.author.id,
+  username: extractUsernameFromHandle(apiPost.author.handle),
+  display_name: apiPost.author.name,
+  avatar: apiPost.author.avatar,
+  caption: cleanHtmlContent(apiPost.content),
+  hashtags: extractHashtags(apiPost.content),
+  media_url: apiPost.attachment?.url,
+  media_type: apiPost.attachment?.type,
+  likes_count: apiPost.likesCount || 0,
+  comments_count: apiPost.repliesCount || 0,
+  created_at: apiPost.createdAt
+});
+
+const mapApiPostToComment = (apiPost: ApiPost): Comment => ({
+  id: apiPost.id,
+  user_id: apiPost.author.id,
+  username: extractUsernameFromHandle(apiPost.author.handle),
+  display_name: apiPost.author.name,
+  avatar: apiPost.author.avatar,
+  content: cleanHtmlContent(apiPost.content),
+  likes_count: apiPost.likesCount || 0,
+  created_at: apiPost.createdAt,
+  replies: []
+});
 
 const PostDetail = () => {
-  const { id } = useParams();
-  const [post] = useState<Post>(mockPost);
-  const [comments, setComments] = useState<Comment[]>(mockComments);
+  const { id } = useParams<{ id: string }>();
+  const [post, setPost] = useState<Post | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likes_count);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
-  };
+  useEffect(() => {
+    const fetchPostData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.get<ApiResponse>(
+          `/federation/posts/${encodeURIComponent(id!)}/with-replies`
+        );
 
-  const handleAddComment = (content: string) => {
-    const newComment: Comment = {
-      id: `comment_${Date.now()}`,
-      user_id: 'current_user',
-      username: 'you',
-      content,
-      likes_count: 0,
-      created_at: new Date().toISOString()
-    };
-    setComments(prev => [newComment, ...prev]);
-  };
-
-  const handleAddReply = (commentId: string, content: string) => {
-    const newReply: Comment = {
-      id: `reply_${Date.now()}`,
-      user_id: 'current_user',
-      username: 'you',
-      content,
-      likes_count: 0,
-      created_at: new Date().toISOString()
+        setPost(mapApiPostToPost(data.post));
+        setComments(data.replies.items.map(mapApiPostToComment));
+        setNextCursor(data.replies.next || null);
+        setIsLiked(data.post.likedByMe || false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setComments(prev => prev.map(comment => 
-      comment.id === commentId 
-        ? { ...comment, replies: [...(comment.replies || []), newReply] }
-        : comment
-    ));
+    fetchPostData();
+  }, [id]);
+
+  const handleLike = async () => {
+    try {
+      // Call your API to like/unlike the post
+      const response = await fetch(`http:localhost:3500/api/posts/${id}/like`, {
+        method: isLiked ? 'DELETE' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Include auth token if needed
+      });
+
+      if (response.ok) {
+        setIsLiked(!isLiked);
+        setPost(prev => prev ? {
+          ...prev,
+          likes_count: isLiked ? prev.likes_count - 1 : prev.likes_count + 1
+        } : null);
+      }
+    } catch (err) {
+      console.error('Error updating like:', err);
+    }
   };
 
-  const handleLikeComment = (commentId: string) => {
-    // Mock implementation - would normally update comment likes in database
-    console.log('Liked comment:', commentId);
-  };
+  if (isLoading) {
+    return <div className="post-detail-container">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="post-detail-container">Error: {error}</div>;
+  }
+
+  if (!post) {
+    return <div className="post-detail-container">Post not found</div>;
+  }
 
   return (
     <div className="post-detail-container">
@@ -126,7 +179,7 @@ const PostDetail = () => {
       <div className="post-detail-header">
         <div className="post-detail-header-content">
           <div className="post-detail-header-nav">
-            <Link to="/feed">
+            <Link to="/">
               <button className="post-detail-back-btn">
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -140,18 +193,20 @@ const PostDetail = () => {
       </div>
 
       <main className="post-detail-main">
-        {/* Post */}
+
         <div className="post-detail-card">
-          {/* Post Header */}
+
           <div className="post-detail-post-header">
             <div className="post-detail-user-info">
               <div className="post-detail-avatar">
-                {post.username.charAt(0).toUpperCase()}
+                {post.avatar ? (
+                  <img src={post.avatar} alt={post.display_name} />
+                ) : (
+                  post.username.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="post-detail-user-details">
-                <h3>
-                  {post.display_name || post.username}
-                </h3>
+                <h3>{post.display_name}</h3>
                 <p className="post-detail-username">@{post.username}</p>
                 <p className="post-detail-timestamp">
                   {new Date(post.created_at).toLocaleDateString()} at {new Date(post.created_at).toLocaleTimeString()}
@@ -163,7 +218,6 @@ const PostDetail = () => {
             </button>
           </div>
 
-          {/* Caption */}
           <div className="post-detail-caption">
             <p className="post-detail-caption-text">{post.caption}</p>
             {post.hashtags.length > 0 && (
@@ -177,16 +231,18 @@ const PostDetail = () => {
             )}
           </div>
 
-          {/* Media */}
-          <div className="post-detail-media">
-            <img
-              src={post.media_url}
-              alt="Post content"
-              className="post-detail-image"
-            />
-          </div>
+          {post.media_url && (
+            <div className="post-detail-media">
+              {post.media_type === 'image' ? (
+                <img src={post.media_url} alt="Post content" className="post-detail-image" />
+              ) : (
+                <video controls className="post-detail-video">
+                  <source src={post.media_url} type={`video/${post.media_url.split('.').pop()}`} />
+                </video>
+              )}
+            </div>
+          )}
 
-          {/* Actions */}
           <div className="post-detail-actions">
             <div className="post-detail-actions-container">
               <div className="post-detail-actions-left">
@@ -195,29 +251,31 @@ const PostDetail = () => {
                   className={`post-detail-like-btn ${isLiked ? 'liked' : ''}`}
                 >
                   <Heart className="w-7 h-7" />
-                  <span className="post-detail-action-count">{likesCount.toLocaleString()}</span>
+                  <span className="post-detail-action-count">{post.likes_count.toLocaleString()}</span>
                 </button>
-                
+
                 <div className="post-detail-comment-count">
                   <MessageCircle className="w-7 h-7" />
-                  <span className="post-detail-action-count">{comments.length}</span>
+                  <span className="post-detail-action-count">{post.comments_count.toLocaleString()}</span>
                 </div>
               </div>
-              
+
               <button className="post-detail-share-btn">
                 <Share className="w-7 h-7" />
               </button>
             </div>
           </div>
 
-          {/* Comments Section */}
           <div className="post-detail-comments">
             <CommentSection
               postId={post.id}
               comments={comments}
-              onAddComment={handleAddComment}
-              onAddReply={handleAddReply}
-              onLikeComment={handleLikeComment}
+              onAddComment={(content) => {
+                console.log('Adding comment:', content);
+              }}
+              onLikeComment={(commentId) => {
+                console.log('Liking comment:', commentId);
+              }}
             />
           </div>
         </div>

@@ -10,14 +10,12 @@ interface Comment {
   content: string;
   likes_count: number;
   created_at: string;
-  replies?: Comment[];
 }
 
 interface CommentSectionProps {
   postId: string;
   comments: Comment[];
   onAddComment: (content: string) => void;
-  onAddReply: (commentId: string, content: string) => void;
   onLikeComment: (commentId: string) => void;
 }
 
@@ -25,26 +23,15 @@ export const CommentSection = ({
   postId, 
   comments, 
   onAddComment, 
-  onAddReply, 
   onLikeComment 
 }: CommentSectionProps) => {
   const [newComment, setNewComment] = useState('');
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyContent, setReplyContent] = useState('');
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
 
   const handleSubmitComment = () => {
     if (newComment.trim()) {
       onAddComment(newComment);
       setNewComment('');
-    }
-  };
-
-  const handleSubmitReply = (commentId: string) => {
-    if (replyContent.trim()) {
-      onAddReply(commentId, replyContent);
-      setReplyContent('');
-      setReplyingTo(null);
     }
   };
 
@@ -59,8 +46,8 @@ export const CommentSection = ({
     onLikeComment(commentId);
   };
 
-  const CommentItem = ({ comment, isReply = false }: { comment: Comment; isReply?: boolean }) => (
-    <div className={`comment-item ${isReply ? 'reply' : ''}`}>
+  const CommentItem = ({ comment }: { comment: Comment }) => (
+    <div className="comment-item">
       <div className="comment-item-header">
         <div className="comment-item-avatar">
           {comment.username.charAt(0).toUpperCase()}
@@ -86,49 +73,10 @@ export const CommentSection = ({
               <span>{comment.likes_count}</span>
             </button>
             
-            {!isReply && (
-              <button
-                onClick={() => setReplyingTo(comment.id)}
-                className="comment-item-reply-btn"
-              >
-                Reply
-              </button>
-            )}
-            
             <span className="comment-item-date">
               {new Date(comment.created_at).toLocaleDateString()}
             </span>
           </div>
-          
-          {replyingTo === comment.id && (
-            <div className="comment-item-reply-form">
-              <Textarea
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="Write a reply..."
-                className="comment-item-reply-textarea"
-              />
-              <div className="comment-item-reply-actions">
-                <button
-                  onClick={() => handleSubmitReply(comment.id)}
-                  disabled={!replyContent.trim()}
-                  className="comment-item-reply-submit-btn"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setReplyingTo(null)}
-                  className="comment-item-reply-cancel-btn"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {comment.replies?.map((reply) => (
-            <CommentItem key={reply.id} comment={reply} isReply />
-          ))}
         </div>
       </div>
     </div>
