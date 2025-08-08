@@ -1,12 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Search, Plus, Heart, User } from 'lucide-react';
+import { Home, Search, Plus, User, Bookmark } from 'lucide-react';
 import './BottomNav.css';
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Search', href: '/search', icon: Search },
   { name: 'Create', href: '/create', icon: Plus },
-  { name: 'Activity', href: '/notifications', icon: Heart },
+  { name: 'Saved', href: '/saved', icon: Bookmark },
   { name: 'Profile', href: '/profile', icon: User },
 ];
 
