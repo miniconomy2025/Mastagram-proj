@@ -1,11 +1,12 @@
 import type { Request, Response } from 'express';
-import { ObjectId, Collection } from 'mongodb';
 import type { UpdateProfileRequest, UpdateProfileResponse } from '../types/profile.types.ts';
 import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils.ts';
 import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators.ts';
 import type { User } from '../models/user.models.ts';
 import { findUserByUsername, updateUser } from '../queries/user.queries.ts';
 import redisClient from '../redis.ts';
+import { invalidateCache } from '../federation/lookup.ts';
+import { federatedHostname } from '../federation/federation.ts';
 
 const PROFILE_CACHE_TTL = 1800; 
 
@@ -24,14 +25,6 @@ export class ProfileController {
       return null;
     }
     return req.user.username;
-  }
-
-  private static async isUsernameTaken(usersCollection: Collection<User>, username: string, userId: string): Promise<boolean> {
-    const existingUser = await usersCollection.findOne({
-      username,
-      _id: { $ne: new ObjectId(userId) }
-    });
-    return !!existingUser;
   }
 
   private static async processAvatar(file: Express.Multer.File | undefined, currentAvatarUrl: string | undefined, userId: string)
@@ -179,8 +172,7 @@ export class ProfileController {
           });
         }
     
-        //  Invalidate the profile cache after a successful update
-        await redisClient.del(`profile:${username}`);
+        await invalidateCache(`@${updatedUser.username}@${federatedHostname}`)
 
         // Return updated profile
         return res.status(200).json({

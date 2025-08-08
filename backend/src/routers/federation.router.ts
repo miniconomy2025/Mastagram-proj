@@ -2,7 +2,7 @@ import { Router } from "express";
 import federation, { createContext, federatedHostname, PAGINATION_LIMIT } from "../federation/federation.ts";
 import logger from "../logger.ts";
 import { cachedLookupObject } from "../federation/lookup.ts";
-import { Collection, CollectionPage, Create, Document, Image, isActor, Link, type Actor, Note, Object, Video, type Context } from "@fedify/fedify";
+import { Collection, CollectionPage, Create, Document, Image, isActor, Link, type Actor, Note, Object, Video, type Context, LanguageString } from "@fedify/fedify";
 import base64url from "base64url";
 import { getFollowersAndFollowingCount, getRepliesCount } from "../utils/federation.util.ts";
 import { getFollowers, getFollowing } from "../controllers/federation.controller.ts";
@@ -20,6 +20,10 @@ function normaliseLink(link: URL | Link | null | undefined): URL | undefined {
     } else {
         return link ?? undefined;
     }
+}
+
+function normaliseLangString(string: LanguageString | string): string {
+    return string instanceof LanguageString ? string.valueOf() : string;
 }
 
 type PaginatedList<T> = {
@@ -97,8 +101,8 @@ async function objectToUser(object: unknown, myUsername?: string): Promise<Feder
     const user: FederatedUser = {
         id: object.id.href,
         handle: `@${object.preferredUsername}@${object.id.hostname}`,
-        name: object.name as (string | null) ?? (object.preferredUsername as string),
-        bio: object.summary as (string | null) ?? '',
+        name: (object.name && normaliseLangString(object.name)) || normaliseLangString(object.preferredUsername),
+        bio: object.summary && normaliseLangString(object.summary) || '',
         avatarUrl: iconUrl?.href,
         splashUrl: imageUrl?.href,
         followers: followersCount ?? 0,
@@ -134,14 +138,14 @@ async function objectToPost(ctx: Context<unknown>, object: unknown, myUsername?:
             if (att.mediaType?.startsWith('image/')) {
                 attachment = {
                     type: 'image',
-                    name: (att.name ?? undefined) as string | undefined,
+                    name: att.name && normaliseLangString(att.name) || undefined,
                     url: att.href?.href,
                 };
                 break;
             } else if (att.mediaType?.startsWith('video/')) {
                 attachment = {
                     type: 'video',
-                    name: (att.name ?? undefined) as string | undefined,
+                    name: att.name && normaliseLangString(att.name) || undefined,
                     url: att.href?.href,
                 };
                 break;
@@ -152,14 +156,14 @@ async function objectToPost(ctx: Context<unknown>, object: unknown, myUsername?:
                 if (att.mediaType?.startsWith('image/')) {
                     attachment = {
                         type: 'image',
-                        name: (att.name ?? undefined) as string | undefined,
+                        name: att.name && normaliseLangString(att.name) || undefined,
                         url: url.href,
                     };
                     break;
                 } else if (att.mediaType?.startsWith('video/')) {
                     attachment = {
                         type: 'video',
-                        name: (att.name ?? undefined) as string | undefined,
+                        name: att.name && normaliseLangString(att.name) || undefined,
                         url: url.href,
                     };
                     break;
@@ -170,7 +174,7 @@ async function objectToPost(ctx: Context<unknown>, object: unknown, myUsername?:
             if (url) {
                 attachment = {
                     type: 'image',
-                    name: (att.name ?? undefined) as string | undefined,
+                    name: att.name && normaliseLangString(att.name) || undefined,
                     url,
                 };
                 break;
@@ -180,7 +184,7 @@ async function objectToPost(ctx: Context<unknown>, object: unknown, myUsername?:
             if (url) {
                 attachment = {
                     type: 'video',
-                    name: (att.name ?? undefined) as string | undefined,
+                    name: att.name && normaliseLangString(att.name) || undefined,
                     url: url.href,
                 }
             }
@@ -285,7 +289,7 @@ federationRouter.get('/users/:userId/posts', maybeAuthenticated, async (req, res
             const cursor = req.query.cursor;
             const cursorId = base64url.default.decode(cursor);
             logger.debug`cursor decoded as ${cursorId}`;
-            const outboxObject = await cachedLookupObject(ctx, cursorId);
+            const outboxObject = await cachedLookupObject(ctx, cursorId, true);
 
             if (outboxObject instanceof Collection) {
                 outbox = outboxObject;
@@ -523,7 +527,7 @@ federationRouter.get('/me/following/posts', ensureAuthenticated, async (req, res
 
     let cursor = Temporal.Now.instant();
     try {
-        let cursorEpoch = parseInt(req.query.cursor as string | undefined ?? '');
+        let cursorEpoch = parseInt(typeof req.query.cursor === 'string' && req.query.cursor || '');
         if (isFinite(cursorEpoch)) {
             cursor = Temporal.Instant.fromEpochMilliseconds(cursorEpoch);
         }

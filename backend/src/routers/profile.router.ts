@@ -1,6 +1,5 @@
-import { Router, type Request, type Response } from 'express';
+import { Router } from 'express';
 import { ensureAuthenticated } from '../configs/passport.config.ts';
-import { type ProfileResponse } from '../types/profile.types.ts';
 import { ProfileController } from '../controllers/profile.controller.ts';
 import upload from '../configs/multer.config.ts';
 

@@ -1,8 +1,8 @@
 import { type Request, type Response } from 'express';
 import { Follow, Undo, type Recipient, isActor } from '@fedify/fedify';
-import federation, { createContext } from '../federation/federation.ts';
+import federation, { createContext, federatedHostname } from '../federation/federation.ts';
 import { findUserByUsername } from '../queries/user.queries.ts';
-import { cachedLookupObject } from '../federation/lookup.ts';
+import { cachedLookupObject, invalidateCache } from '../federation/lookup.ts';
 import logger from '../logger.ts';
 import { createFollowing, deleteFollowing, checkIfFollowing } from '../queries/following.queries.ts';
 import { Temporal } from '@js-temporal/polyfill';
@@ -48,6 +48,9 @@ export class FollowController {
 
       await ctx.sendActivity({ username: followerUsername }, followingActor as Recipient, followActivity);
       logger.info(`Follow activity sent from ${followerUsername} to ${followingId}`);
+
+      await invalidateCache(`@${follower.username}@${federatedHostname}`);
+      await invalidateCache(followingActor.id.href);
 
       await createFollowing({
         followerUsername,
@@ -102,6 +105,9 @@ export class FollowController {
 
       await ctx.sendActivity({ username: followerUsername }, followingActor as Recipient, undoFollowActivity);
       logger.info(`Undo Follow activity sent from ${followerUsername} to ${followingId}`);
+
+      await invalidateCache(`@${follower.username}@${federatedHostname}`);
+      await invalidateCache(followingActor.id.href);
 
       await deleteFollowing(followingActor.id.href, followerUsername);
 
