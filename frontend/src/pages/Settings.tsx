@@ -23,12 +23,6 @@ const Settings = () => {
       ]
     },
     {
-      title: 'Preferences',
-      items: [
-        { icon: Bell, label: 'Notifications', href: '/settings/notifications' }
-      ]
-    },
-    {
       title: 'Support',
       items: [
         { icon: HelpCircle, label: 'Help Center', href: '/help' },
