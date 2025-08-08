@@ -708,6 +708,75 @@ federationRouter.get('/search', async (req, res) => {
     }
 });
 
+federationRouter.get('/posts/:postId/with-replies', async (req, res) => {
+    const postId = req.params.postId;
+    logger.info`fetching post with replies ${postId}`;
+
+    const ctx = createContext(federation, req);
+    
+    try {
+        const postObject = await cachedLookupObject(ctx, postId);
+        
+        if (!(postObject instanceof Note)) {
+            res.status(404).json({ message: 'Post not found.' });
+            return;
+        }
+
+
+        const post = await objectToPost(postObject, req.user?.username);
+        if (!post) {
+            res.status(404).json({ message: 'Post not found.' });
+            return;
+        }
+
+        let replies: Collection | null = null;
+        if (req.query.cursor && typeof req.query.cursor === 'string') {
+            try {
+                const cursorId = base64url.default.decode(req.query.cursor);
+                const outboxObject = await cachedLookupObject(ctx, cursorId);
+                if (outboxObject instanceof Collection) {
+                    replies = outboxObject;
+                }
+            } catch (error) {
+                logger.warn`Error decoding cursor: ${error}`;
+            }
+        } else {
+            replies = await postObject.getReplies();
+        }
+
+        let replyItems: FederatedPost[] = [];
+        let nextCursor: string | undefined;
+        
+        if (replies) {
+            try {
+                const replyCollection = await readCollection(ctx, replies);
+                replyItems = (await Promise.all(
+                    replyCollection.items.map(item => objectToPost(item, req.user?.username))
+                )).filter((item): item is FederatedPost => item !== null);
+                
+                nextCursor = replyCollection.next 
+                    ? base64url.default.encode(replyCollection.next.href)
+                    : undefined;
+            } catch (error) {
+                logger.error`Error processing replies: ${error}`;
+            }
+        }
+
+        res.json({
+            post,
+            replies: {
+                items: replyItems,
+                next: nextCursor ? `/api/federation/posts/${encodeURIComponent(postId)}/with-replies?cursor=${nextCursor}` : undefined,
+                count: replies?.totalItems ?? replyItems.length,
+            }
+        });
+
+    } catch (error) {
+        logger.error`Error fetching post with replies: ${error}`;
+        res.status(500).json({ message: UNEXPECTED_ERROR });
+    }
+});
+
 
 federationRouter.get('/users/:userId/followers', getFollowers);
 

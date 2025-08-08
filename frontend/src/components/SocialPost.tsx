@@ -68,7 +68,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
   };
 
   const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/post/${post.id}`;
+    const shareUrl = `${window.location.origin}/post/${encodeURIComponent(post.id)}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -94,7 +94,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
 
     return (
       <div className="social-post-media">
-        <Link to={`/post/${post.id}`}>
+        <Link to={`/post/${encodeURIComponent(post.id)}`}>
           {post.attachment.type === 'image' ? (
             <img
               src={post.attachment.url}
@@ -171,7 +171,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
             <Heart fill={isPostLiked ? '#ef4444' : 'none'} color={isPostLiked ? '#ef4444' : 'currentColor'} />
             <span>{likesCount}</span>
           </button>
-          <Link to={`/post/${post.id}`} className="sp-icon-btn">
+          <Link to={`/post/${encodeURIComponent(post.id)}`} className="sp-icon-btn">
             <MessageCircle />
             <span>{post.repliesCount || 0}</span>
           </Link>
