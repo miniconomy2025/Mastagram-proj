@@ -25,7 +25,7 @@ export const SocialPost = ({ post }: SocialPostProps) => {
   const [isPostLiked, setIsPostLiked] = useState(post.likedByMe || false);
   const [isPostSaved, setIsPostSaved] = useState(isSaved(post.id));
   const [userFollowing, setUserFollowing] = useState(isFollowing(post.author.handle));
-  
+
   useEffect(() => {
     setIsPostSaved(isSaved(post.id));
   }, [isSaved, post.id]);
@@ -151,16 +151,18 @@ export const SocialPost = ({ post }: SocialPostProps) => {
       </div>
 
       <div className="sp-caption">
-        <div className="sp-content">
-          {parsedContent}
-        </div>
-        {hashtags.length > 0 && (
-          <div className="sp-tags">
-            {hashtags.map((tag, index) => (
-              <span key={index}>#{tag}</span>
-            ))}
+        <Link to={`/post/${encodeURIComponent(post.id)}`}>
+          <div className="sp-content">
+            {parsedContent}
           </div>
-        )}
+          {hashtags.length > 0 && (
+            <div className="sp-tags">
+              {hashtags.map((tag, index) => (
+                <span key={index}>#{tag}</span>
+              ))}
+            </div>
+          )}
+        </Link>
       </div>
 
       {renderMedia()}
