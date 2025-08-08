@@ -135,6 +135,27 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     }));
 }
 
+export const maybeAuthenticated = async (req: Request, _res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader?.split(' ')[1];
+  
+    if (!token) return next();
+    
+    const payload = await verifyGoogleIdToken(token);
+
+    const user = await findUserByGoogleId(payload.sub);
+
+    if (!user) return next();
+
+    req.user = user;
+    
+    return next();
+  } catch {
+    return next();
+  }
+};
+
 // Middleware to ensure user is authenticated using Google ID token
 export const ensureAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
