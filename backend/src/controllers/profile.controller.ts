@@ -1,13 +1,9 @@
 import type { Request, Response } from 'express';
-import { ObjectId, Collection } from 'mongodb';
 import type { UpdateProfileRequest, UpdateProfileResponse } from '../types/profile.types.ts';
 import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils.ts';
 import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators.ts';
 import type { User } from '../models/user.models.ts';
 import { findUserByUsername, updateUser } from '../queries/user.queries.ts';
-import redisClient from '../redis.ts';
-
-const PROFILE_CACHE_TTL = 1800; 
 
 export class ProfileController {
   // ---------------------- Helper Methods ----------------------
@@ -24,14 +20,6 @@ export class ProfileController {
       return null;
     }
     return req.user.username;
-  }
-
-  private static async isUsernameTaken(usersCollection: Collection<User>, username: string, userId: string): Promise<boolean> {
-    const existingUser = await usersCollection.findOne({
-      username,
-      _id: { $ne: new ObjectId(userId) }
-    });
-    return !!existingUser;
   }
 
   private static async processAvatar(file: Express.Multer.File | undefined, currentAvatarUrl: string | undefined, userId: string)
@@ -95,23 +83,12 @@ export class ProfileController {
       if (!username) return;
 
       try {
-          // 1. Try to get data from Redis cache
-          const cachedProfile = await redisClient.get(`profile:${username}`);
-          if (cachedProfile) {
-            return res.status(200).json(JSON.parse(cachedProfile));
-          }
-
-          // 2. If not in cache, fetch from MongoDB
           const user = await findUserByUsername(username);
 
           if (!user) {
               return res.status(404).json({ error: 'User not found' });
           }
 
-          // 3. Cache the result for next time
-          await redisClient.set(`profile:${username}`, JSON.stringify(user), 'EX', PROFILE_CACHE_TTL);
-
-          // 4. Return consistent response format
           return res.status(200).json({
             username: user.username,
             email: user.email,
@@ -165,7 +142,6 @@ export class ProfileController {
           });
         }
 
-        // Update user in database
         const updatedUser = await updateUser(username, updateObject);
         
         if (!updatedUser) {
@@ -178,11 +154,7 @@ export class ProfileController {
             }
           });
         }
-    
-        //  Invalidate the profile cache after a successful update
-        await redisClient.del(`profile:${username}`);
 
-        // Return updated profile
         return res.status(200).json({
           success: true,
           data: {
