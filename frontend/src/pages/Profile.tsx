@@ -58,7 +58,7 @@ type ListTab = 'followers' | 'following';
 const useUserProfile = (handle: string | undefined) => {
   return useApiQuery<UserProfileResponse>(
     ['userProfile', handle],
-    handle ? `/federation/users/${handle}` : '',
+    handle ? `/federation/users/@PeoVukea5019@todo-secure-list.xyz` : '',
     { enabled: !!handle }
   );
 };
@@ -444,19 +444,6 @@ const Profile = () => {
                   >
                     <Grid3X3 size={16} /> Posts
                   </button>
-                  <button
-                    className={`tab-trigger ${activeTab === 'liked' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('liked')}
-                  >
-                    <Heart size={16} /> Liked
-                  </button>
-                  { isViewingOwnProfile && 
-                  <button
-                    className={`tab-trigger ${activeTab === 'saved' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('saved')}
-                  >
-                    <Bookmark size={16} /> Saved
-                  </button>}
                 </div>
 
                 {activeTab === 'posts' && (
@@ -493,22 +480,6 @@ const Profile = () => {
                         <p>This user has not posted anything.</p>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {activeTab === 'liked' && (
-                  <div className="empty-state">
-                    <Heart className="empty-icon" />
-                    <h3>No liked posts yet</h3>
-                    <p>Posts liked by this user will appear here</p>
-                  </div>
-                )}
-
-                {activeTab === 'saved' && isViewingOwnProfile && (
-                  <div className="empty-state">
-                    <Bookmark className="empty-icon" />
-                    <h3>No saved posts yet</h3>
-                    <p>Save posts to view them later</p>
                   </div>
                 )}
               </div>
