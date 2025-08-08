@@ -91,7 +91,7 @@ export const useSocialActions = () => {
 
   const unsavePost = useCallback(async (postId: string) => {
     try {
-      await api.delete('/saved-posts', { data: { postId } });
+      await api.delete(`/saved-posts/${encodeURIComponent(postId)}`);
       setSavedPosts(prev => {
         const newPosts = { ...prev };
         delete newPosts[postId];

@@ -61,9 +61,9 @@ savedPostsRouter.post('/', ensureAuthenticated, async (req, res) => {
 });
 
 // Unsave a post
-savedPostsRouter.delete('/', ensureAuthenticated, async (req, res) => {
+savedPostsRouter.delete('/:postId', ensureAuthenticated, async (req, res) => {
   try {
-    const { postId } = req.body;
+    const { postId } = req.params;
     const username = req.user?.username;
 
     if (!username || !postId) {
