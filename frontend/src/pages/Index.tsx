@@ -35,12 +35,15 @@ const Index = () => {
   }, [nextCursor, isLoading, hasMore]);
 
   // Helper function to extract cursor from URL
-  const extractCursor = (url: string): string | undefined => {
+  const extractCursor = (url: string): string => {
     try {
-      const urlObj = new URL(url);
-      return urlObj.searchParams.get('cursor') || undefined;
+      const cursor = parseInt(url.substring(url.indexOf('cursor=') + 7));
+      if (isFinite(cursor))
+        return `${cursor}`;
+      else
+        return '0';
     } catch {
-      return undefined;
+      return '0';
     }
   };
 
