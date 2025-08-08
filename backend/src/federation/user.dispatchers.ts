@@ -3,7 +3,7 @@ import { findUserByUsername, updateUser } from "../queries/user.queries.ts";
 import type { User } from "../models/user.models.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import logger from "../logger.ts";
-import { PAGINATION_LIMIT } from "./federation.ts";
+import { federatedHostname, PAGINATION_LIMIT } from "./federation.ts";
 import { countFollowersByUsername, findFollowersByUsername } from "../queries/follower.queries.ts";
 import { countFollowingByUsername, findFollowingByUsername } from "../queries/following.queries.ts";
 import { countPostsByAuthor, findPostsByAuthor } from "../queries/post.queries.ts";
@@ -22,7 +22,7 @@ async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
         name: user.name,
         summary: user.bio,
         published: Temporal.Instant.fromEpochMilliseconds(user.createdAt),
-        url: new URL(`${process.env.FRONTEND_URL}/profile/${user.username}@todo-secure-list.xyz`),
+        url: new URL(`${process.env.FRONTEND_URL}/profile/${user.username}@${federatedHostname}`),
         inbox: ctx.getInboxUri(user.username),
         outbox: ctx.getOutboxUri(user.username),
         followers: ctx.getFollowersUri(user.username),

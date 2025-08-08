@@ -37,8 +37,8 @@ export class FollowController {
       }
 
       const followingActor = await cachedLookupObject(ctx, followingId);
-      if (!followingActor || !isActor(followingActor) || !followingActor.inboxId) {
-        return res.status(404).json({ message: 'User to follow not found or has no public inbox' });
+      if (!followingActor || !isActor(followingActor) || !followingActor.inboxId || !followingActor.id?.href) {
+        return res.status(404).json({ message: 'User to follow not found or is invalid' });
       }
 
       const followActivity = new Follow({
@@ -51,7 +51,7 @@ export class FollowController {
 
       await createFollowing({
         followerUsername,
-        actorId: followingId,
+        actorId: followingActor.id.href,
         createdAt: Temporal.Now.instant().epochMilliseconds,
       });
 
@@ -86,8 +86,8 @@ export class FollowController {
       }
 
       const followingActor = await cachedLookupObject(ctx, followingId);
-      if (!followingActor || !isActor(followingActor) || !followingActor.inboxId) {
-        return res.status(404).json({ message: 'User to unfollow not found or has no inbox' });
+      if (!followingActor || !isActor(followingActor) || !followingActor.inboxId || !followingActor.id?.href) {
+        return res.status(404).json({ message: 'User to unfollow not found or is invalid' });
       }
 
       const followActivity = new Follow({
@@ -103,7 +103,7 @@ export class FollowController {
       await ctx.sendActivity({ username: followerUsername }, followingActor as Recipient, undoFollowActivity);
       logger.info(`Undo Follow activity sent from ${followerUsername} to ${followingId}`);
 
-      await deleteFollowing(followingId, followerUsername);
+      await deleteFollowing(followingId, followingActor.id.href);
 
       return res.status(200).json({ message: 'Unfollow request sent successfully' });
     } catch (error: any) {

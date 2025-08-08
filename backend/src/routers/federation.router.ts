@@ -11,7 +11,6 @@ import { ensureAuthenticated } from "../configs/passport.config.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import { checkIfFollowing } from "../queries/following.queries.ts";
 import { doesUserLikePost } from "../queries/feed.queries.ts";
-import config from "../config.ts";
 
 const UNEXPECTED_ERROR = 'An unexpected error has occurred.';
 
@@ -112,7 +111,7 @@ async function objectToUser(object: unknown, myUsername?: string): Promise<Feder
 }
 
 
-async function objectToPost(object: unknown, myUsername?: string): Promise<FederatedPost | null> {
+async function objectToPost(ctx: Context<unknown>, object: unknown, myUsername?: string): Promise<FederatedPost | null> {
     if (!(object instanceof Note) || !object.id || !object.content) {
         logger.warn`malformed post, ${object && typeof object === 'object' && 'id' in object ? object.id : 'no object id'}`;
         return null;
@@ -216,7 +215,7 @@ async function objectToPost(object: unknown, myUsername?: string): Promise<Feder
         repliesCount,
         isReplyTo: isReplyTo?.href,
         createdAt: object.published?.toString(),
-        likedByMe: !!myUsername && await doesUserLikePost(myUsername, object.id.href),
+        likedByMe: !!myUsername && await doesUserLikePost(ctx.getActorUri(myUsername).href, object.id.href),
     };
 
     return post;
@@ -311,7 +310,7 @@ federationRouter.get('/users/:userId/posts', async (req, res) => {
         if (item instanceof Create && item.objectId) {
             const object = await cachedLookupObject(ctx, item.objectId.href);
             if (object)
-                return await objectToPost(object, req.user?.username);
+                return await objectToPost(ctx, object, req.user?.username);
         }
         return null;
     }))).filter(item => !!item);
@@ -371,7 +370,7 @@ federationRouter.get('/posts/:postId', async (req, res) => {
 
     logger.debug`fetched object: ${!!object}`;
 
-    const post = await objectToPost(object, req.user?.username);
+    const post = await objectToPost(ctx, object, req.user?.username);
 
     if (!post) {
         res.status(404);
@@ -440,7 +439,7 @@ federationRouter.get('/posts/:postId/replies', async (req, res) => {
         return;
     }
 
-    const items = (await Promise.all(replyItems.items.map(item => objectToPost(item, req.user?.username))))
+    const items = (await Promise.all(replyItems.items.map(item => objectToPost(ctx, item, req.user?.username))))
         .filter(item => !!item);
 
     const nextCursor = replyItems.next
@@ -484,7 +483,7 @@ async function expandFeed(ctx: Context<unknown>, feed: FeedReader, username: str
             if (!object)
                 return null;
 
-            const post = await objectToPost(object, username);
+            const post = await objectToPost(ctx, object, username);
             if (!post || !item.published)
                 return null;
             return {
@@ -705,6 +704,75 @@ federationRouter.get('/search', async (req, res) => {
     } catch (error) {
         logger.error(`Search failed: ${error}`);
         return res.status(500).json({ error: "Search failed" });
+    }
+});
+
+federationRouter.get('/posts/:postId/with-replies', async (req, res) => {
+    const postId = req.params.postId;
+    logger.info`fetching post with replies ${postId}`;
+
+    const ctx = createContext(federation, req);
+    
+    try {
+        const postObject = await cachedLookupObject(ctx, postId);
+        
+        if (!(postObject instanceof Note)) {
+            res.status(404).json({ message: 'Post not found.' });
+            return;
+        }
+
+
+        const post = await objectToPost(ctx, postObject, req.user?.username);
+        if (!post) {
+            res.status(404).json({ message: 'Post not found.' });
+            return;
+        }
+
+        let replies: Collection | null = null;
+        if (req.query.cursor && typeof req.query.cursor === 'string') {
+            try {
+                const cursorId = base64url.default.decode(req.query.cursor);
+                const outboxObject = await cachedLookupObject(ctx, cursorId);
+                if (outboxObject instanceof Collection) {
+                    replies = outboxObject;
+                }
+            } catch (error) {
+                logger.warn`Error decoding cursor: ${error}`;
+            }
+        } else {
+            replies = await postObject.getReplies();
+        }
+
+        let replyItems: FederatedPost[] = [];
+        let nextCursor: string | undefined;
+        
+        if (replies) {
+            try {
+                const replyCollection = await readCollection(ctx, replies);
+                replyItems = (await Promise.all(
+                    replyCollection.items.map(item => objectToPost(ctx, item, req.user?.username))
+                )).filter((item): item is FederatedPost => item !== null);
+                
+                nextCursor = replyCollection.next 
+                    ? base64url.default.encode(replyCollection.next.href)
+                    : undefined;
+            } catch (error) {
+                logger.error`Error processing replies: ${error}`;
+            }
+        }
+
+        res.json({
+            post,
+            replies: {
+                items: replyItems,
+                next: nextCursor ? `/api/federation/posts/${encodeURIComponent(postId)}/with-replies?cursor=${nextCursor}` : undefined,
+                count: replies?.totalItems ?? replyItems.length,
+            }
+        });
+
+    } catch (error) {
+        logger.error`Error fetching post with replies: ${error}`;
+        res.status(500).json({ message: UNEXPECTED_ERROR });
     }
 });
 
