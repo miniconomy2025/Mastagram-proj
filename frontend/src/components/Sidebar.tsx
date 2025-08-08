@@ -72,7 +72,6 @@ export const Sidebar = () => {
             </div>
             <div className="user-info">
               <p className="user-name">{auth.getUser()?.name || 'Unknown User'}</p>
-              <p className="user-username">@{auth.getUser()?.email?.split('@')[0] || 'user'}</p>
             </div>
           </div>
         ) : (
