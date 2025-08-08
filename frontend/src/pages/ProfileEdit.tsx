@@ -88,10 +88,21 @@ const ProfileEdit = () => {
     }
   );
 
+  const DISPLAY_NAME_MAX = 32;
+  const BIO_MAX = 160;
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      if (name === 'displayName') {
+        return { ...prev, [name]: value.slice(0, DISPLAY_NAME_MAX) };
+      }
+      if (name === 'bio') {
+        return { ...prev, [name]: value.slice(0, BIO_MAX) };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
 
@@ -192,7 +203,11 @@ const ProfileEdit = () => {
                 value={formData.displayName}
                 onChange={handleChange}
                 className="input-field"
+                maxLength={DISPLAY_NAME_MAX}
               />
+              <div className="char-count">
+                {formData.displayName.length}/{DISPLAY_NAME_MAX}
+              </div>
             </div>
 
             <div className="form-field">
@@ -219,7 +234,11 @@ const ProfileEdit = () => {
                 onChange={handleChange}
                 rows={3}
                 className="input-field"
+                maxLength={BIO_MAX}
               />
+              <div className="char-count">
+                {formData.bio.length}/{BIO_MAX}
+              </div>
             </div>
           </div>
 
