@@ -88,28 +88,6 @@ export const CommentSection = ({
         Comments ({comments.length})
       </h3>
       
-      {/* Add comment */}
-      <div className="comment-section-add">
-        <div className="comment-section-avatar">
-          U
-        </div>
-        <div className="comment-section-input-container">
-          <Textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
-            className="comment-section-textarea"
-          />
-          <button
-            onClick={handleSubmitComment}
-            disabled={!newComment.trim()}
-            className="comment-section-submit-btn"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      
       {/* Comments list */}
       {comments.length === 0 ? (
         <div className="comment-section-empty">
