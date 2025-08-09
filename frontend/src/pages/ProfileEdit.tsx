@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings, Camera, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Camera, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,14 @@ import { useApiMutation, useApiQuery } from '@/lib/api';
 import { Label } from '@/components/ui/label';
 import './ProfileEdit.css'; 
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+];
+const ACCEPT_IMAGES = ALLOWED_IMAGE_MIME_TYPES.join(',');
 
 const ProfileEdit = () => {
   const navigate = useNavigate();
@@ -108,6 +116,22 @@ const ProfileEdit = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.avatar) {
+      if (!ALLOWED_IMAGE_MIME_TYPES.includes(formData.avatar.type)) {
+        toast({
+          title: 'Unsupported image type',
+          description: 'Allowed formats: JPEG, PNG, WEBP, GIF.',
+        });
+        return;
+      }
+      if (formData.avatar.size > MAX_FILE_SIZE) {
+        toast({
+          title: 'Image too large',
+          description: 'Max file size is 5 MB.',
+        });
+        return;
+      }
+    }
     setIsLoading(true);
     const form = new FormData();
     if (formData.displayName) form.append('displayName', formData.displayName);
@@ -120,6 +144,22 @@ const ProfileEdit = () => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.type)) {
+        toast({
+          title: 'Unsupported image type',
+          description: 'Allowed formats: JPEG, PNG, WEBP, GIF.',
+        });
+        if (e.target) e.target.value = '';
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+          toast({
+            title: 'Image too large',
+            description: 'Max file size is 5 MB.',
+          });
+        if (e.target) e.target.value = '';
+        return;
+      }
       setFormData(prev => ({
         ...prev,
         avatar: file,
@@ -184,7 +224,7 @@ const ProfileEdit = () => {
                 <input
                   id="avatar-upload"
                   type="file"
-                  accept="image/*"
+                  accept={ACCEPT_IMAGES}
                   onChange={handleAvatarChange}
                   className="hidden-input"
                   ref={fileInputRef}

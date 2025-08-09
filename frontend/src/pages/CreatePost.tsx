@@ -1,8 +1,23 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Image, ChevronLeft, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import './CreatePost.css';
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const ALLOWED_IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+];
+const ALLOWED_VIDEO_MIME_TYPES = [
+  'video/mp4',
+  'video/mpeg',
+];
+const ACCEPTED_MIME = [...ALLOWED_IMAGE_MIME_TYPES, ...ALLOWED_VIDEO_MIME_TYPES].join(',');
+const MAX_FILES_PER_POST = 5;
 
 interface MediaItem {
   url: string;
@@ -13,6 +28,7 @@ interface MediaItem {
 const CreatePost = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   const [caption, setCaption] = useState('');
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [currentHashtag, setCurrentHashtag] = useState('');
@@ -20,22 +36,58 @@ const CreatePost = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [currentStep, setCurrentStep] = useState<'media' | 'details'>('media');
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  // Remove mediaRef and use a cleanup effect that depends on media
+  useEffect(() => {
+    return () => {
+      media.forEach((m) => URL.revokeObjectURL(m.url));
+    };
+  }, [media]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
+    const allowedTypes = new Set([...ALLOWED_IMAGE_MIME_TYPES, ...ALLOWED_VIDEO_MIME_TYPES]);
     const newMedia: MediaItem[] = [];
-    Array.from(files).forEach(file => {
+    const errors: string[] = [];
+
+    let remainingSlots = Math.max(0, MAX_FILES_PER_POST - media.length);
+
+    for (const file of Array.from(files)) {
+      if (remainingSlots <= 0) {
+        errors.push(`You can upload up to ${MAX_FILES_PER_POST} files per post.`);
+        break;
+      }
+
+      const mime = file.type || '';
+      if (!allowedTypes.has(mime)) {
+        errors.push(`Unsupported file type: ${file.name}`);
+        continue;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`File too large: ${file.name} (max 50MB)`);
+        continue;
+      }
+
       const url = URL.createObjectURL(file);
-      const type = file.type.startsWith('video') ? 'video' : 'image';
+      const type = mime.startsWith('video') ? 'video' : 'image';
       newMedia.push({ url, type, file });
-    });
+      remainingSlots -= 1;
+    }
 
-    setMedia(prev => [...prev, ...newMedia]);
+    if (newMedia.length > 0) {
+      setMedia(prev => [...prev, ...newMedia]);
+      if (media.length === 0) {
+        setCurrentStep('details');
+      }
+    }
 
-    if (media.length === 0 && newMedia.length > 0) {
-      setCurrentStep('details');
+    if (errors.length > 0) {
+      toast({
+        title: 'Some files were not added',
+        description: errors.join('\n'),
+      });
     }
 
     if (fileInputRef.current) {
@@ -44,6 +96,10 @@ const CreatePost = () => {
   };
 
   const removeMedia = (index: number) => {
+    const toRemove = media[index];
+    if (toRemove) {
+      URL.revokeObjectURL(toRemove.url);
+    }
     const newMedia = media.filter((_, i) => i !== index);
     setMedia(newMedia);
 
@@ -72,7 +128,13 @@ const CreatePost = () => {
   };
 
   const handleSubmit = async () => {
-    if (media.length === 0) return;
+    if (media.length === 0) {
+      toast({
+        title: 'Add media',
+        description: 'Please add at least one image or video before sharing.',
+      });
+      return;
+    }
 
     setIsUploading(true);
     const formData = new FormData();
@@ -85,9 +147,14 @@ const CreatePost = () => {
 
     try {
       await api.post('/feed', formData);
+      media.forEach((m) => URL.revokeObjectURL(m.url));
       navigate('/profile');
     } catch (error) {
       console.error('Error creating post:', error);
+      toast({
+        title: 'Failed to create post',
+        description: 'Please try again later.',
+      });
     } finally {
       setIsUploading(false);
     }
@@ -159,11 +226,11 @@ const CreatePost = () => {
           <div className="details-step">
             <div className="media-preview">
               {media[currentMediaIndex]?.type === 'image' ? (
-                <img
-                  src={media[currentMediaIndex].url}
-                  alt={`Post preview ${currentMediaIndex}`}
-                  className="preview-media"
-                />
+                  <img
+                    src={media[currentMediaIndex].url}
+                    alt={`Post preview ${currentMediaIndex}`}
+                    className="preview-media"
+                  />
               ) : (
                 <video
                   src={media[currentMediaIndex].url}
@@ -192,11 +259,11 @@ const CreatePost = () => {
                     className="thumbnail-container"
                   >
                     {item.type === 'image' ? (
-                      <img
-                        src={item.url}
-                        alt=""
-                        className="thumbnail"
-                      />
+                        <img
+                          src={item.url}
+                          alt=""
+                          className="thumbnail"
+                        />
                     ) : (
                       <video
                         src={item.url}
@@ -270,7 +337,7 @@ const CreatePost = () => {
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden-input"
-          accept="image/*,video/*"
+          accept={ACCEPTED_MIME}
           multiple
         />
       </main>
