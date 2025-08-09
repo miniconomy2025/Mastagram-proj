@@ -1,4 +1,4 @@
-import { Accept, Add, Announce, Block, Create, Delete, Follow, Like, Reject, Remove, Undo, Update, type Federation } from "@fedify/fedify";
+import { Accept, Add, Announce, Block, Create, Delete, Dislike, Follow, Like, Reject, Remove, Undo, Update, type Federation } from "@fedify/fedify";
 import logger from "../logger.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import { createFollower, deleteFollower } from "../queries/follower.queries.ts";
@@ -84,6 +84,8 @@ export function addInboxListeners<T>(federation: Federation<T>) {
                         targetId: post.id.href,
                         userId: liker.id.href,
                         createdAt: like.likedAt,
+                        read: false,
+                        content: `User ${liker.preferredUsername} liked your post ${post.id.href}`,
                     };
 
                     notificationManager.sendToUser(String(liker.preferredUsername), likeNotification);

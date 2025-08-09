@@ -8,8 +8,6 @@ export const up = async (db, _client) => {
     await db.collection('users').createIndex({ email: 1 }, { unique: true });
     await db.collection('users').createIndex({ googleId: 1 }, { unique: true, sparse: true });
 
-    await db.createCollection('posts');
-
     await db.createCollection('followers');
     await db.collection('followers').createIndex(['actor.id', 'followingUsername'], { name: 'follower-unique-index', unique: true })
 
@@ -47,7 +45,6 @@ export const down = async (db, _client) => {
     await db.dropCollection('feed').catch(() => {});
     await db.dropCollection('following').catch(() => {});
     await db.dropCollection('followers').catch(() => {});
-    await db.dropCollection('posts').catch(() => {});
     await db.dropCollection('users').catch(() => {});
     await db.dropCollection('notifications').catch(() => {});
     await db.dropCollection('likes').catch(() => {});
