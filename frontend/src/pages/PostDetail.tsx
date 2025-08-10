@@ -246,23 +246,11 @@ const PostDetail = () => {
           <div className="post-detail-actions">
             <div className="post-detail-actions-container">
               <div className="post-detail-actions-left">
-                <button
-                  onClick={handleLike}
-                  className={`post-detail-like-btn ${isLiked ? 'liked' : ''}`}
-                >
-                  <Heart className="w-7 h-7" />
-                  <span className="post-detail-action-count">{post.likes_count.toLocaleString()}</span>
-                </button>
-
                 <div className="post-detail-comment-count">
                   <MessageCircle className="w-7 h-7" />
                   <span className="post-detail-action-count">{post.comments_count.toLocaleString()}</span>
                 </div>
               </div>
-
-              <button className="post-detail-share-btn">
-                <Share className="w-7 h-7" />
-              </button>
             </div>
           </div>
 
