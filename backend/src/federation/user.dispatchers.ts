@@ -1,4 +1,4 @@
-import { Create, Endpoints, exportJwk, generateCryptoKeyPair, importJwk, Person, type Context, type Federation, type Recipient, type RequestContext } from "@fedify/fedify";
+import { Create, Endpoints, exportJwk, generateCryptoKeyPair, Image, importJwk, Person, type Context, type Federation, type Recipient, type RequestContext } from "@fedify/fedify";
 import { findUserByUsername, updateUser } from "../queries/user.queries.ts";
 import type { User } from "../models/user.models.ts";
 import { Temporal } from "@js-temporal/polyfill";
@@ -32,6 +32,11 @@ async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
         }),
         publicKey: keys[0].cryptographicKey,
         assertionMethods: keys.map(key => key.multikey),
+        ...(user.avatarUrl && {
+            icon: new Image({
+                url: new URL(user.avatarUrl)
+            })
+        })
     });
 }
 
