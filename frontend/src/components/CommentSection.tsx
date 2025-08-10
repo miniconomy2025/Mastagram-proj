@@ -92,7 +92,7 @@ export const CommentSection = ({
       {comments.length === 0 ? (
         <div className="comment-section-empty">
           <MessageCircle className="comment-section-empty-icon" />
-          <p className="comment-section-empty-text">No comments yet. Be the first to comment!</p>
+          <p className="comment-section-empty-text">No comments to read yet.</p>
         </div>
       ) : (
         <div className="comment-section-list">

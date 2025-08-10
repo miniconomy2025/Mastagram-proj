@@ -19,13 +19,11 @@ const Settings = () => {
       title: 'Account',
       items: [
         { icon: User, label: 'Edit Profile', href: '/profile/edit' },
-        { icon: Shield, label: 'Privacy & Security', href: '/settings/privacy' },
       ]
     },
     {
       title: 'Support',
       items: [
-        { icon: HelpCircle, label: 'Help Center', href: '/help' },
         { icon: LogOut, label: 'Sign Out', isDestructive: true }
       ]
     }
