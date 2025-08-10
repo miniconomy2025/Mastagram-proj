@@ -213,9 +213,6 @@ const PostDetail = () => {
                 </p>
               </div>
             </div>
-            <button className="post-detail-more-btn">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
           </div>
 
           <div className="post-detail-caption">
