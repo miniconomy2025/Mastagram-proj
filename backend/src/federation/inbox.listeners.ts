@@ -1,4 +1,4 @@
-import { Accept, Add, Announce, Block, Create, Delete, Follow, Like, Reject, Remove, Undo, Update, type Federation } from "@fedify/fedify";
+import { Accept, Activity, Add, Announce, Block, Create, Delete, Follow, Like, Reject, Remove, Undo, Update, type Federation } from "@fedify/fedify";
 import logger from "../logger.ts";
 import { Temporal } from "@js-temporal/polyfill";
 import { createFollower, deleteFollower } from "../queries/follower.queries.ts";
@@ -6,6 +6,7 @@ import { likePost, unlikePost } from "../queries/feed.queries.ts";
 import type { LikeModel } from "../types/interactions.js";
 import { notificationManager } from "../controllers/notifications.controller.ts";
 import type { Notification } from "../controllers/notifications.controller.ts";
+import { invalidateCache } from "./lookup.ts";
 
 function unimplemented<T>(message?: T) {
     if (message != null)
@@ -17,6 +18,12 @@ function unimplemented<T>(message?: T) {
 
 export function addInboxListeners<T>(federation: Federation<T>) {
     federation.setInboxListeners("/users/{identifier}/inbox", "/inbox")
+        .on(Activity, async (_ctx, activity) => {
+            for (const id of activity.actorIds)
+                await invalidateCache(id.href);
+            for (const id of activity.objectIds)
+                await invalidateCache(id.href);
+        })
         .on(Follow, async (ctx, follow) => {
             logger.debug`Follow activity received ${follow}`;
             
@@ -56,6 +63,9 @@ export function addInboxListeners<T>(federation: Federation<T>) {
                     object: follow,
                 })
             );
+            
+            await invalidateCache(follow.objectId.href);
+            await invalidateCache(follow.actorId.href);
 
             logger.info`Accepted follower ${follow.actorId.href}`;
         })

@@ -4,6 +4,9 @@ import { uploadToS3, deleteOldAvatarFromS3 } from '../utils/s3.utils.ts';
 import { validateProfileUpdate, ProfileValidationError } from '../utils/validators/profile.validators.ts';
 import type { User } from '../models/user.models.ts';
 import { findUserByUsername, updateUser } from '../queries/user.queries.ts';
+import redisClient from '../redis.ts';
+import { invalidateCache } from '../federation/lookup.ts';
+import { federatedHostname } from '../federation/federation.ts';
 
 export class ProfileController {
   // ---------------------- Helper Methods ----------------------
@@ -154,6 +157,8 @@ export class ProfileController {
             }
           });
         }
+    
+        await invalidateCache(`@${updatedUser.username}@${federatedHostname}`)
 
         return res.status(200).json({
           success: true,
