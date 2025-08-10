@@ -14,7 +14,15 @@ export const s3Settings = {
   bucketName: process.env.S3_BUCKET_NAME,
   bucketUrl: process.env.S3_BUCKET_URL,
   maxFileSize: 50 * 1024 * 1024,
-  allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/mpeg'],
+  allowedMimeTypes: [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/svg+xml',
+    'video/mp4',
+    'video/mpeg',
+  ],
 };
 
 export default s3Config;
