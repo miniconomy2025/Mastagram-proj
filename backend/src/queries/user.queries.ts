@@ -1,5 +1,9 @@
 import { getDb } from "./client.ts";
 import { type User } from "../models/user.models.ts";
+import type { FederatedUser } from "../types/federation.types.ts";
+import logger from "../logger.ts";
+import { updateUserInElasticsearch } from "../utils/elasticsearch.util.ts";
+import federation, { createContext } from "../federation/federation.ts";
 
 type MongoUser = Omit<User, 'username'> & { _id: string };
 
@@ -61,10 +65,33 @@ export async function updateUser(username: string, delta: Partial<Omit<User, 'us
         returnDocument: "after",
     });
 
-    if (!user)
-        return user;
+    if (!user) {
+        return null;
+    }
 
-    return mongoUserToUser(user);
+    const updatedUser = mongoUserToUser(user);
+
+    try {
+        const esUpdate: Partial<FederatedUser> = {};
+        
+        if (delta.name) esUpdate.name = delta.name;
+        if (delta.bio) esUpdate.bio = delta.bio;
+        if (delta.avatarUrl) esUpdate.avatarUrl = delta.avatarUrl;
+        
+
+        if (Object.keys(esUpdate).length > 0) {
+            const ctx = createContext(federation);
+            const userUri = ctx.getActorUri(username).href;
+            
+            await updateUserInElasticsearch(userUri, esUpdate);
+            
+            logger.info`Successfully updated Elasticsearch record for user ${username}`;
+        }
+    } catch (error) {
+        logger.error`Failed to update Elasticsearch record for user ${username}: ${error}`;
+    }
+
+    return updatedUser;
 }
 
 export async function createUser(user: User) {

@@ -11,12 +11,14 @@ import type { Post } from "../models/post.models.ts";
 import type { WithId } from "mongodb";
 import { postToNote } from "./post.dispatchers.ts";
 import { convertActivityPubHandleToUrl } from "../utils/federation.util.ts";
+import { indexUserInElasticsearch } from "../utils/elasticsearch.util.ts";
+import type { FederatedUser } from "../types/federation.types.ts";
 
 async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
     const url = ctx.getActorUri(user.username);
     const keys = await ctx.getActorKeyPairs(user.username);
     
-    return new Person({
+    const person =  new Person({
         id: url,
         preferredUsername: user.username,
         name: user.name,
@@ -38,6 +40,27 @@ async function userToPerson<T>(ctx: RequestContext<T>, user: User) {
             })
         })
     });
+
+    const federatedUser: FederatedUser = {
+        id: url.href,
+        handle: `@${user.username}@${federatedHostname}`,
+        name: user.name,
+        bio: user.bio,
+        followers: 0,
+        following: 0,
+        avatarUrl: user.avatarUrl,
+        followersUri: ctx.getFollowersUri(user.username).href,  
+        followingUri: ctx.getFollowingUri(user.username).href,
+        createdAt: user.createdAt.toString()
+    };
+
+    try {
+        await indexUserInElasticsearch(federatedUser);
+    } catch (error) {
+        logger.error`Failed to index new user in Elasticsearch: ${error}`;
+    }
+
+    return person;
 }
 
 export function postToCreate<T>(ctx: Context<T>, post: WithId<Post>) {

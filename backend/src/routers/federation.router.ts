@@ -610,105 +610,126 @@ federationRouter.get('/me/following/posts', ensureAuthenticated, async (req, res
 });
 
 
-federationRouter.get('/search', maybeAuthenticated, async (req, res) => {
-    try {
-        const { q, type, cursor, limit = 20 } = req.query;
-        const ctx = createContext(federation, req);
+federationRouter.get('/search', ensureAuthenticated, async (req, res) => {
+  try {
+    const { q, type, cursor, limit = 20 } = req.query;
+    const ctx = createContext(federation, req);
+    const currentUsername = req.user?.username;
 
-        if (!q || typeof q !== 'string') {
-            return res.status(400).json({ error: "Query parameter 'q' is required" });
-        }
-
-        const searchType = type === 'user' ? 'user' :
-            type === 'post' ? 'post' :
-                'both';
-
-        let results: (FederatedUser | FederatedPost)[] = [];
-        let nextCursor: string | undefined;
-
-        // 1. Exact handle lookup (only if searching users or both, and q starts with @)
-        if ((searchType === 'user' || searchType === 'both') && q.startsWith('@')) {
-            try {
-                const handleParts = q.slice(1).split('@');
-                const username = handleParts[0];
-                const domain = handleParts[1] || "";
-                const actorUrl = `https://${domain}/users/${username}`;
-
-                const actor = await cachedLookupObject(ctx, actorUrl);
-                const user = await objectToUser(actor, req.user?.username);
-                if (user) {
-                    results.push(user);
-                }
-            } catch (error) {
-                logger.warn(`User lookup failed for ${q}: ${error}`);
-            }
-        }
-
-        if (searchType === 'user' || searchType === 'both') {
-            const userSearchRes = await esClient.search({
-                index: 'federated-users',
-                from: cursor ? parseInt(cursor as string) : 0,
-                size: parseInt(limit as string),
-                query: {
-                    multi_match: {
-                        query: q,
-                        fields: ['name', 'handle'],
-                        fuzziness: 'AUTO',
-                    },
-                },
-            });
-
-            const hits = userSearchRes.hits.hits;
-            const users = hits.map(hit => hit._source) as FederatedUser[];
-
-            results = results.concat(users);
-        }
-
-        if (searchType === 'post' || searchType === 'both') {
-            const postSearchRes = await esClient.search({
-                index: 'federated-posts',
-                from: cursor ? parseInt(cursor as string) : 0,
-                size: parseInt(limit as string),
-                query: {
-                    match: {
-                        content: {
-                            query: q,
-                            fuzziness: "AUTO",
-                            operator: 'and'
-                        }
-                    }
-                }
-
-            });
-
-            const hits = postSearchRes.hits.hits;
-            const posts = hits.map(hit => hit._source) as FederatedPost[];
-
-            results = results.concat(posts);
-        }
-
-        const totalHits = results.length;
-
-        if (results.length === parseInt(limit as string)) {
-            const newCursor = cursor ? parseInt(cursor as string) + parseInt(limit as string) : parseInt(limit as string);
-            nextCursor = newCursor.toString();
-        }
-
-        // Separate results by type
-        const users = results.filter(r => 'handle' in r) as FederatedUser[];
-        const posts = results.filter(r => 'content' in r) as FederatedPost[];
-
-        return res.json({
-            users,
-            posts,
-            next: nextCursor ? `/api/federation/search?q=${encodeURIComponent(q)}&type=${searchType}&cursor=${nextCursor}&limit=${limit}` : undefined,
-            count: totalHits,
-        });
-
-    } catch (error) {
-        logger.error(`Search failed: ${error}`);
-        return res.status(500).json({ error: "Search failed" });
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({ error: "Query parameter 'q' is required" });
     }
+
+    const searchType = type === 'user' ? 'user' : type === 'post' ? 'post' : 'both';
+
+    let results: (FederatedUser | FederatedPost)[] = [];
+    let nextCursor: string | undefined;
+
+    // 1. Exact handle lookup (only if searching users or both, and q starts with @)
+    if ((searchType === 'user' || searchType === 'both') && q.startsWith('@')) {
+      try {
+        const handleParts = q.slice(1).split('@');
+        const usernamePart = handleParts[0];
+        const domain = handleParts[1] || '';
+        const actorUrl = `https://${domain}/users/${usernamePart}`;
+
+        const actor = await cachedLookupObject(ctx, actorUrl);
+        const user = await objectToUser(actor, currentUsername);
+        if (user) {
+          results.push(user);
+        }
+      } catch (error) {
+        logger.warn(`User lookup failed for ${q}: ${error}`);
+      }
+    }
+
+    if (searchType === 'user' || searchType === 'both') {
+      const userSearchRes = await esClient.search({
+        index: 'federated-users',
+        from: cursor ? parseInt(cursor as string, 10) : 0,
+        size: parseInt(limit as string, 10),
+        query: {
+          multi_match: {
+            query: q,
+            fields: ['name', 'handle'],
+            fuzziness: 'AUTO',
+          },
+        },
+      });
+
+      const hits = userSearchRes.hits.hits;
+
+      const usersWithCounts = await Promise.all(
+        hits.map(async (hit: any) => {
+          const source = hit._source;
+          const { followersCount, followingCount } = await getFollowersAndFollowingCount(
+            source.followingUri ?? '',
+            source.followingUri ?? ''
+          );
+
+          return {
+            ...source,
+            followers: followersCount,
+            following: followingCount,
+          };
+        })
+      );
+
+      results = results.concat(usersWithCounts);
+    }
+
+    if (searchType === 'post' || searchType === 'both') {
+      const postSearchRes = await esClient.search({
+        index: 'federated-posts',
+        from: cursor ? parseInt(cursor as string, 10) : 0,
+        size: parseInt(limit as string, 10),
+        query: {
+          match: {
+            content: {
+              query: q,
+              fuzziness: 'AUTO',
+              operator: 'and',
+            },
+          },
+        },
+      });
+
+      const hits = postSearchRes.hits.hits;
+      const posts = hits.map((hit) => hit._source as FederatedPost);
+      results = results.concat(posts);
+    }
+
+    const totalHits = results.length;
+
+    if (results.length === parseInt(limit as string, 10)) {
+      const newCursor = cursor ? parseInt(cursor as string, 10) + parseInt(limit as string, 10) : parseInt(limit as string, 10);
+      nextCursor = newCursor.toString();
+    }
+
+    let users = results.filter((r) => 'handle' in r) as FederatedUser[];
+    if (currentUsername) {
+      users = await Promise.all(
+        users.map(async (user) => {
+          const followedByMe = await checkIfFollowing(currentUsername, user.id);
+          return { ...user, followedByMe };
+        })
+      );
+    }
+
+    const posts = results.filter((r) => 'content' in r) as FederatedPost[];
+
+    return res.json({
+      users,
+      posts,
+      next: nextCursor
+        ? `/api/federation/search?q=${encodeURIComponent(q)}&type=${searchType}&cursor=${nextCursor}&limit=${limit}`
+        : undefined,
+      count: totalHits,
+    });
+  } catch (error) {
+    logger.error(`Search failed: ${error}`);
+    return res.status(500).json({ error: 'Search failed' });
+  }
 });
 
 federationRouter.get('/posts/:postId/with-replies', maybeAuthenticated, async (req, res) => {
@@ -779,6 +800,53 @@ federationRouter.get('/posts/:postId/with-replies', maybeAuthenticated, async (r
         res.status(500).json({ message: UNEXPECTED_ERROR });
     }
 });
+
+federationRouter.get('/suggested-users', ensureAuthenticated, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit?.toString() || '10', 10);
+    const currentUsername = req.user?.username;
+
+    const esResponse = await esClient.search({
+      index: 'federated-users',
+      size: limit,
+      sort: [{ createdAt: { order: 'desc' } }],
+      query: { match_all: {} }
+    });
+
+    const hits = esResponse.hits.hits;
+
+    let users = await Promise.all(
+      hits.map(async (hit: any) => {
+        const source = hit._source;
+        const { followersCount, followingCount } = await getFollowersAndFollowingCount(
+          source.followingUri ?? '',
+          source.followingUri ?? ''
+        );
+
+        return {
+          ...source,
+          followers: followersCount,
+          following: followingCount
+        } as FederatedUser;
+      })
+    );
+
+    if (currentUsername) {
+      users = await Promise.all(
+        users.map(async (user) => {
+          const followedByMe = await checkIfFollowing(currentUsername, user.id);
+          return { ...user, followedByMe };
+        })
+      );
+    }
+
+    return res.json(users);
+  } catch (error) {
+    logger.error(`Failed to fetch suggested users: ${error}`);
+    return res.status(500).json({ error: 'Failed to fetch suggested users' });
+  }
+});
+
 
 
 federationRouter.get('/users/:userId/followers', maybeAuthenticated, getFollowers);

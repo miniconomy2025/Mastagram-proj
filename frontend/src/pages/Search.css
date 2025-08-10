@@ -101,7 +101,7 @@ a{
 }
 
 .welcome-section {
-  margin-top: 3rem;
+  /* margin-top: 3rem; */
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -194,4 +194,22 @@ a{
   height: 1.5rem;
   color: hsl(var(--primary));
   animation: spin 1s linear infinite;
+}
+
+.default-users-section {
+  width: 100%;
+}
+
+.default-users-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.default-users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  width: 100%;
 }

@@ -12,12 +12,53 @@ const Search = () => {
   const [query, setQuery] = useState('');
   const [searchFilter, setSearchFilter] = useState<'all' | 'users' | 'hashtags'>('all');
   const [results, setResults] = useState<(User | FederatedPost)[]>([]);
+  const [defaultUsers, setDefaultUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [defaultUsersLoading, setDefaultUsersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   const abortController = useRef<AbortController | null>(null);
+
+  const filterDuplicates = (items: (User)[]) => {
+    const seen = new Set();
+    return items.filter(item => {
+      const duplicate = seen.has(item.id);
+      seen.add(item.id);
+      return !duplicate;
+    });
+  };
+
+  useEffect(() => {
+    const fetchDefaultUsers = async () => {
+      try {
+        setDefaultUsersLoading(true);
+        const response = await fetch('https://todo-secure-list.xyz/api/federation/suggested-users?limit=10');
+        if (!response.ok) throw new Error('Failed to fetch default users');
+        
+        const data = await response.json();
+        const mappedUsers: User[] = data.map((user: any) => ({
+          id: user.id,
+          username: user.handle,
+          display_name: user.name,
+          bio: user.bio,
+          avatar_url: user.avatarUrl,
+          follower_count: user.followers,
+          following_count: user.following,
+          created_at: user.createdAt,
+        }));
+        
+        setDefaultUsers(filterDuplicates(mappedUsers));
+      } catch (err) {
+        console.error('Error fetching default users:', err);
+      } finally {
+        setDefaultUsersLoading(false);
+      }
+    };
+
+    fetchDefaultUsers();
+  }, []);
 
   const fetchResults = (initial = false) => {
     if (!query.trim()) return;
@@ -58,7 +99,7 @@ const Search = () => {
         }));
 
         const newResults: (User | FederatedPost)[] = [
-          ...mappedUsers,
+          ...filterDuplicates(mappedUsers),
           ...(data.posts ?? []),
         ];
 
@@ -128,17 +169,19 @@ const Search = () => {
 
         {!query.trim() && (
           <div className="welcome-section">
-            <div className="welcome-header">
-              <h2 className="welcome-title">Welcome to Mastagram</h2>
-              <p className="welcome-subtitle">Discover amazing posts and connect with creators</p>
-            </div>
-
-            <div className="hashtag-grid">
-              {['#trending', '#viral', '#creative', '#inspiration'].map((tag) => (
-                <button key={tag} onClick={() => setQuery(tag)} className="hashtag-button">
-                  <span className="hashtag-text">{tag}</span>
-                </button>
-              ))}
+            <div className="default-users-section">
+              <h3 className="default-users-title">Suggested Creators</h3>
+              {defaultUsersLoading ? (
+                <div className="loading-container">
+                  <Loader2 className="loading-spinner" />
+                </div>
+              ) : (
+                <div className="default-users-grid">
+                  {defaultUsers.map((user) => (
+                    <UserCard key={user.id} user={user} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
