@@ -11,7 +11,7 @@ import logger from "../logger.ts";
 
 export const federatedHostname = new URL(config.federation.origin ?? '').hostname;
 
-export function createContext(federation: Federation<unknown>, request: Request) {
+export function createContext(federation: Federation<unknown>, request?: Request) {
     return federation.createContext(new URL(config.federation.origin!), undefined);
 }
 

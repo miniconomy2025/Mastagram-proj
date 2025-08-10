@@ -19,7 +19,7 @@ export const SearchHeader = ({ query, onQueryChange, isLoading }: SearchHeaderPr
 
           <input
             type="search"
-            placeholder="Search posts and users..."
+            placeholder="Search users..."
             value={query}
             onChange={(e: ChangeEvent<HTMLInputElement>) =>
               onQueryChange(e.target.value)
