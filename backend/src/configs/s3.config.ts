@@ -19,7 +19,6 @@ export const s3Settings = {
     'image/png',
     'image/webp',
     'image/gif',
-    'image/svg+xml',
     'video/mp4',
     'video/mpeg',
   ],

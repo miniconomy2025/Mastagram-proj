@@ -1,5 +1,5 @@
 import { getDb } from "./client.ts";
-import { type User, type UserKeyPair } from "../models/user.models.ts";
+import { type User } from "../models/user.models.ts";
 
 type MongoUser = Omit<User, 'username'> & { _id: string };
 
@@ -12,6 +12,7 @@ function userToMongoUser(user: User): MongoUser {
         bio: user.bio,
         keySet: user.keySet,
         createdAt: user.createdAt,
+        avatarUrl: user.avatarUrl,
     };
 }
 
@@ -24,6 +25,7 @@ function mongoUserToUser(mongoUser: MongoUser): User {
         bio: mongoUser.bio,
         keySet: mongoUser.keySet,
         createdAt: mongoUser.createdAt,
+        avatarUrl: mongoUser.avatarUrl,
     };
 }
 
