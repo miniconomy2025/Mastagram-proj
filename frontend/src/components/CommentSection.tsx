@@ -57,21 +57,11 @@ export const CommentSection = ({
           <div className="comment-item-bubble">
             <div className="comment-item-bubble-header">
               <p className="comment-item-username">@{comment.username}</p>
-              <button className="comment-item-more-btn">
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
             </div>
             <p className="comment-item-text">{comment.content}</p>
           </div>
           
           <div className="comment-item-actions">
-            <button
-              onClick={() => handleLikeComment(comment.id)}
-              className={`comment-item-like-btn ${likedComments.has(comment.id) ? 'liked' : ''}`}
-            >
-              <Heart className="w-4 h-4" />
-              <span>{comment.likes_count}</span>
-            </button>
             
             <span className="comment-item-date">
               {new Date(comment.created_at).toLocaleDateString()}
