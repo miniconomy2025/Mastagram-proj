@@ -1,3 +1,4 @@
+import { toast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { FederatedPost, FederatedUser, PaginatedResponse } from "@/types/federation";
 
@@ -20,6 +21,11 @@ export const getFollowing = async (
     };
   } catch (error) {
     console.error('Error fetching following:', error);
+    toast({
+        title: 'Error',
+        description: 'Failed fetching following. Please try again.',
+        variant: 'destructive',
+      });
     throw new Error('Failed to fetch following list');
   }
 };
@@ -41,6 +47,11 @@ export const getFollowers = async (
     };
   } catch (error) {
     console.error('Error fetching followers:', error);
+    toast({
+        title: 'Error',
+        description: 'Failed fetching followers. Please try again.',
+        variant: 'destructive',
+      });
     throw new Error('Failed to fetch followers list');
   }
 };
@@ -62,6 +73,11 @@ export const getPosts = async (
     };
   } catch (error) {
     console.error('Error fetching user posts:', error);
+    toast({
+        title: 'Error',
+        description: 'Failed fetching user posts. Please try again.',
+        variant: 'destructive',
+      });
     throw new Error('Failed to fetch user posts');
   }
 };
@@ -83,6 +99,11 @@ export const getFeeds = async (
     };
   } catch (error) {
     console.error('Error fetching feed:', error);
+    toast({
+        title: 'Error',
+        description: 'Failed fetching feed. Please try again.',
+        variant: 'destructive',
+      });
     throw new Error('Failed to fetch feed');
   }
 };

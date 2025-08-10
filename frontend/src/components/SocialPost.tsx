@@ -78,6 +78,8 @@ export const SocialPost = ({ post }: SocialPostProps) => {
         });
       } catch (err) {
         console.error('Share failed:', err);
+        
+        
       }
     } else {
       try {
@@ -141,11 +143,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
           </div>
         </Link>
 
-        <div className="social-post-header-actions">
-          <button className="social-post-more-btn">
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
-        </div>
 
 
       </div>
@@ -171,7 +168,6 @@ export const SocialPost = ({ post }: SocialPostProps) => {
         <div className="sp-left-actions">
           <button onClick={handleLike} className={`sp-icon-btn ${isPostLiked ? 'liked' : ''}`}>
             <Heart fill={isPostLiked ? '#ef4444' : 'none'} color={isPostLiked ? '#ef4444' : 'currentColor'} />
-            <span>{likesCount}</span>
           </button>
           <Link to={`/post/${encodeURIComponent(post.id)}`} className="sp-icon-btn">
             <MessageCircle />
