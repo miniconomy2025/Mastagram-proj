@@ -810,7 +810,19 @@ federationRouter.get('/suggested-users', ensureAuthenticated, async (req, res) =
       index: 'federated-users',
       size: limit,
       sort: [{ createdAt: { order: 'desc' } }],
-      query: { match_all: {} }
+      query: {
+        bool: {
+          must_not: currentUsername
+            ? [
+              {
+                term: {
+                  "handle": `@${currentUsername}@${federatedHostname}`
+                }
+              }
+            ]
+            : []
+        }
+      },
     });
 
     const hits = esResponse.hits.hits;
@@ -832,8 +844,6 @@ federationRouter.get('/suggested-users', ensureAuthenticated, async (req, res) =
     );
 
     if (currentUsername) {
-      users = users.filter(user => user.handle !== currentUsername);
-
       users = await Promise.all(
         users.map(async (user) => {
           const followedByMe = await checkIfFollowing(currentUsername, user.id);
