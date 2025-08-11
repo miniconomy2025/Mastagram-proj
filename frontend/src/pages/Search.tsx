@@ -5,8 +5,26 @@ import { UserCard } from '@/components/UserCard';
 import { Loader2, TrendingUp } from 'lucide-react';
 import './Search.css';
 import { FederatedPost, User } from '@/types/federation';
+import { api } from '@/lib/api';
 
 const PAGE_SIZE = 10;
+
+type SearchResponse = {
+  users?: Array<{
+    id: string;
+    handle: string;
+    name: string;
+    bio: string;
+    avatarUrl?: string;
+    followers: number;
+    following: number;
+    createdAt?: string;
+    followedByMe: boolean;
+  }>;
+  posts?: FederatedPost[];
+  next?: string;
+  count?: number;
+};
 
 const Search = () => {
   const [query, setQuery] = useState('');
@@ -21,24 +39,23 @@ const Search = () => {
 
   const abortController = useRef<AbortController | null>(null);
 
-  const filterDuplicates = (items: (User)[]) => {
-    const seen = new Set();
-    return items.filter(item => {
-      const duplicate = seen.has(item.id);
-      seen.add(item.id);
-      return !duplicate;
-    });
-  };
-
   useEffect(() => {
     const fetchDefaultUsers = async () => {
       try {
         setDefaultUsersLoading(true);
-        const response = await fetch('https://todo-secure-list.xyz/api/federation/suggested-users?limit=10');
-        if (!response.ok) throw new Error('Failed to fetch default users');
+        const data = await api.get<Array<{
+          id: string;
+          handle: string;
+          name: string;
+          bio: string;
+          avatarUrl?: string;
+          followers: number;
+          following: number;
+          createdAt?: string;
+          followedByMe: boolean;
+        }>>('/federation/suggested-users?limit=10');
         
-        const data = await response.json();
-        const mappedUsers: User[] = data.map((user: any) => ({
+        const mappedUsers: User[] = data.map((user) => ({
           id: user.id,
           username: user.handle,
           display_name: user.name,
@@ -47,9 +64,10 @@ const Search = () => {
           follower_count: user.followers,
           following_count: user.following,
           created_at: user.createdAt,
+          followedByMe: user.followedByMe,
         }));
         
-        setDefaultUsers(filterDuplicates(mappedUsers));
+        setDefaultUsers(mappedUsers);
       } catch (err) {
         console.error('Error fetching default users:', err);
       } finally {
@@ -60,7 +78,17 @@ const Search = () => {
     fetchDefaultUsers();
   }, []);
 
-  const fetchResults = (initial = false) => {
+  // Helper function to filter duplicates by id
+  const filterDuplicates = (items: (User | FederatedPost)[]) => {
+    const seen = new Set();
+    return items.filter((item) => {
+      const duplicate = seen.has(item.id);
+      seen.add(item.id);
+      return !duplicate;
+    });
+  };
+
+  const fetchResults = async (initial = false) => {
     if (!query.trim()) return;
 
     setLoading(true);
@@ -71,49 +99,55 @@ const Search = () => {
     }
     abortController.current = new AbortController();
 
-    const cursorParam = nextCursor ? `&cursor=${nextCursor}` : '';
-    const typeParam =
-      searchFilter === 'users'
-        ? '&type=user'
-        : searchFilter === 'hashtags'
-        ? '&type=post'
-        : '';
-    const url = `https://todo-secure-list.xyz/api/federation/search?q=${encodeURIComponent(
-      query
-    )}${typeParam}${cursorParam}&limit=${PAGE_SIZE}`;
+    try {
+      const cursorParam = nextCursor ? `&cursor=${nextCursor}` : '';
+      const typeParam =
+        searchFilter === 'users'
+          ? '&type=user'
+          : searchFilter === 'hashtags'
+          ? '&type=post'
+          : '';
 
-    fetch(url, { signal: abortController.current.signal })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`Error: ${res.statusText}`);
-        const data = await res.json();
-
-        const mappedUsers: User[] = (data.users ?? []).map((user: any) => ({
-          id: user.id,
-          username: user.handle,
-          display_name: user.name,
-          bio: user.bio,
-          avatar_url: user.avatarUrl,
-          follower_count: user.followers,
-          following_count: user.following,
-          created_at: user.createdAt,
-        }));
-
-        const newResults: (User | FederatedPost)[] = [
-          ...filterDuplicates(mappedUsers),
-          ...(data.posts ?? []),
-        ];
-
-        setResults((prev) => (initial ? newResults : [...prev, ...newResults]));
-        setNextCursor(data.next ?? null);
-        setTotal(data.count ?? 0);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setError(err.message);
-          setLoading(false);
+      const response = await api.get<SearchResponse>(
+        `/federation/search?q=${encodeURIComponent(query)}${typeParam}${cursorParam}&limit=${PAGE_SIZE}`,
+        {
+          signal: abortController.current.signal,
         }
+      );
+
+      const mappedUsers: User[] = (response.users ?? []).map((user) => ({
+        id: user.id,
+        username: user.handle,
+        display_name: user.name,
+        bio: user.bio,
+        avatar_url: user.avatarUrl,
+        follower_count: user.followers,
+        following_count: user.following,
+        created_at: user.createdAt,
+        followedByMe: user.followedByMe,
+      }));
+
+      const newResults: (User | FederatedPost)[] = filterDuplicates([
+        ...mappedUsers,
+        ...(response.posts ?? []),
+      ]);
+
+      setResults((prev) => {
+        if (initial) return newResults;
+
+        const combined = [...prev, ...newResults];
+        return filterDuplicates(combined);
       });
+
+      setNextCursor(response.next ?? null);
+      setTotal(response.count ?? 0);
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        setError((err as Error).message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
