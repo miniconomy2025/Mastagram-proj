@@ -13,12 +13,6 @@ export interface PaginatedResponse<T> {
   next?: string;
 }
 
-export interface CollectionData<T> {
-  items: T[] | unknown[];
-  total?: number;
-  next?: string;
-}
-
 export interface FederatedUser {
   id: string,
   handle: string,

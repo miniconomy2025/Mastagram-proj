@@ -1,9 +1,17 @@
-import { isActor, LanguageString, Note, Object, Video, type Context } from "@fedify/fedify";
+import { Document, Image, isActor, LanguageString, Note, Object, Video, type Context } from "@fedify/fedify";
 import config from "../config.ts";
 import logger from "../logger.ts";
 import redisClient from "../redis.ts";
 
 const CACHE_PREFIX = 'mastagram::network_objects_cache::';
+
+function allowedToCache(object: Object) {
+    return (
+        isActor(object) ||
+        object instanceof Note || object instanceof Document ||
+        object instanceof Video || object instanceof Image
+    );
+}
 
 export async function cachedLookupObject<T>(ctx: Context<T>, id: string, bypassCache?: boolean) {
     const cacheKey = `${CACHE_PREFIX}${id}`;
@@ -12,32 +20,31 @@ export async function cachedLookupObject<T>(ctx: Context<T>, id: string, bypassC
     if (cachedObject) {
         try {
             logger.debug`object was in cache: ${id}`;
-            return await Object.fromJsonLd(JSON.parse(cachedObject));
+            const obj = await Object.fromJsonLd(JSON.parse(cachedObject));
+            if (allowedToCache(obj)) {
+                return obj;
+            } else {
+                logger.debug`not allowed to cache, deleting`;
+                await redisClient.del(cacheKey);
+            }
         } catch {
             logger.error`failed to fetch object from cache: ${id}`;
-            return null;
         }
     }
     
     try {
         logger.debug`object was not in cache, fetching: ${id}`;
         const object = await ctx.lookupObject(id);
-        logger.debug`fetched object: ${!!object}`;
+        logger.debug`fetched object (${id}): ${!!object}`;
 
-        const allowedToCache = object && (
-            isActor(object) ||
-            object instanceof Note || object instanceof Document ||
-            object instanceof Video || object instanceof Image
-        );
-
-        if (allowedToCache) {
+        if (object && allowedToCache(object)) {
             logger.debug`saved object to cache: ${id}`;
             await redisClient.set(cacheKey, JSON.stringify(await object.toJsonLd()), 'EX', config.app.objectCacheTimeSeconds);
         }
 
         return object;
-    } catch {
-        logger.error`failed to fetch object: ${id}`;
+    } catch (error) {
+        logger.error`failed to fetch object (${id}): ${error}`;
         return null;
     }
 }

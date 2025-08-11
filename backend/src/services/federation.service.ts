@@ -2,7 +2,7 @@ import { type Context, Collection, CollectionPage, type Object, isActor } from "
 import logger from "../logger.ts";
 import { cachedLookupObject } from '../federation/lookup.ts';
 import { normaliseLink } from "../utils/federation.util.ts";
-import type { CollectionData, FederatedUserList } from "../types/federation.types.ts";
+import type { PaginatedResponse, FederatedUserList } from "../types/federation.types.ts";
 
 
 export async function transformFederatedUser(
@@ -122,7 +122,7 @@ export async function getFederatedUserCollection(
   userId: string,
   collectionType: 'followers' | 'following',
   page?: string,
-): Promise<CollectionData<FederatedUserList>> {
+): Promise<PaginatedResponse<FederatedUserList>> {
   const userObject = await cachedLookupObject(ctx, userId);
 
   if (!userObject || !isActor(userObject)) {
@@ -138,7 +138,11 @@ export async function getFederatedUserCollection(
     throw new Error(`${collectionType} collection not found.`);
   }
 
-  const collection = await cachedLookupObject(ctx, collectionId) as Collection;
+  const collection = await cachedLookupObject(ctx, collectionId);
+
+  if (!(collection instanceof Collection)) {
+    throw new Error(`Valid ${collectionType} collection not found.`);
+  }
 
   return getCollectionItems(ctx, collection, page, transformFederatedUser);
 }
