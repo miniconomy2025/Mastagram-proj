@@ -15,7 +15,6 @@ export async function cachedLookupObject<T>(ctx: Context<T>, id: string, bypassC
             return await Object.fromJsonLd(JSON.parse(cachedObject));
         } catch {
             logger.error`failed to fetch object from cache: ${id}`;
-            return null;
         }
     }
     
